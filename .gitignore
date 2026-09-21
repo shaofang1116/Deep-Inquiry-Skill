@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+
+# Runtime and disposable validation state.
+.mentor-state/
+.sandbox/
+
+# Isolated development copies and local release artifacts.
+workspaces/
+*.zip

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "m0_cli_route_baseline",
+  "source": "skill/autonomous-mentor/scripts/cli.py",
+  "commands": {
+    "ask": {
+      "compatibility": "one_release_alias",
+      "durable_effect": "read_current_topic",
+      "owner": "scripts.query.query_knowledge",
+      "runtime_effect": "none"
+    },
+    "cancel": {
+      "compatibility": "vnext_host_path",
+      "durable_effect": "none",
+      "owner": "scripts.vnext_host.VNextHost.cancel",
+      "runtime_effect": "remove_active_pending"
+    },
+    "demo": {
+      "compatibility": "legacy_dispatcher",
+      "durable_effect": "fixture_owned",
+      "owner": "examples.smoke_run.main",
+      "runtime_effect": "temporary_fixtures"
+    },
+    "init": {
+      "compatibility": "vnext_host_path",
+      "durable_effect": "create_topic_v1_after_valid_seed",
+      "owner": "scripts.vnext_host.VNextHost.initialize",
+      "runtime_effect": "create_pending_and_request"
+    },
+    "learn": {
+      "compatibility": "vnext_host_path",
+      "durable_effect": "none",
+      "owner": "scripts.vnext_host.VNextHost.learn",
+      "runtime_effect": "create_or_resume_vnext_pending"
+    },
+    "query": {
+      "compatibility": "vnext_read_path",
+      "durable_effect": "read_current_topic",
+      "owner": "scripts.query.query_knowledge",
+      "runtime_effect": "none"
+    },
+    "state": {
+      "compatibility": "vnext_host_path",
+      "durable_effect": "read_current_topic_version",
+      "owner": "scripts.vnext_host.VNextHost.state",
+      "runtime_effect": "read_vnext_host_run"
+    },
+    "step": {
+      "compatibility": "vnext_host_path",
+      "durable_effect": "commit_at_most_one_delta",
+      "owner": "scripts.vnext_host.VNextHost.step",
+      "runtime_effect": "consume_vnext_pending_judgment"
+    }
+  },
+  "exclusions": [
+    "absolute_paths",
+    "timestamps",
+    "temporary_request_ids",
+    "model_prose"
+  ]
+}
