@@ -34,6 +34,13 @@ owners would preserve an ambiguous source of behavior and delay retirement.
 5. The legacy route may not be retained as a silent fallback after the switch.
    Any external compatibility exception requires active dependency evidence,
    an observation point, and a retirement trigger.
+6. The read-only compatibility window starts on 2026-09-21 and has a minimum
+   30-calendar-day observation period. At the opening baseline there is no Git
+   tag, remote release, or declared public version. Before any public
+   compatibility retirement, the later decision must record a concrete
+   release/version identifier, inspect redacted observation receipts, and
+   record one per-surface outcome. This window is documented in
+   `docs/aegis/work/2026-09-21-compatibility-window/`.
 
 ## Consequences
 
@@ -64,7 +71,9 @@ owners would preserve an ambiguous source of behavior and delay retirement.
 - No persistent knowledge or user session is deleted by this ADR.
 - Retirement trigger: after M0.5 default-entry acceptance and a defined
   read-only compatibility window, remove legacy learning-path references and
-  their adapter-only tests.
+  their adapter-only tests. The observation period alone is not sufficient:
+  release/version evidence and the per-surface decision record are also
+  required.
 
 ## Verification
 
