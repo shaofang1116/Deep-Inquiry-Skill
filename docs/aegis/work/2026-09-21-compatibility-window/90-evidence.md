@@ -71,6 +71,39 @@ Passed assertions:
 - Claim not allowed now: that no external dependency exists or that any
   compatibility surface may be retired.
 
+## v1 Import Surface Contract
+
+RED command:
+
+```bash
+python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
+```
+
+Initial result: exit `1` because `scripts.v1_import_record` did not exist.
+The failure reached the intended missing explicit contract, not importer setup.
+
+GREEN commands:
+
+```bash
+python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
+python3 skill/autonomous-mentor/examples/migration_v1_checks.py
+```
+
+Final result: both exit `0`.
+
+- The contract classifies each declared v1 input path as `mapped`,
+  `provenance_only`, or `validated_only`.
+- Mapped fields cover the durable topic projection: proposition, coverage,
+  rules, evidence, counterexamples, gaps, and timestamps.
+- Teaching state, rule context, evidence version, and counterexample review
+  context remain inert migration provenance.
+- Runtime references, question tree, decision state, progress log, and
+  teaching-unrelated legacy fields remain shape-validated only.
+- `migration_v1_checks.py` passed all 8 existing cases, including source-hash
+  protection, typed corrupt-input rejection, and evolved-topic overwrite
+  protection.
+- `migrate_v1.py` and `SessionState` were not modified.
+
 ## Anti-Entropy Declaration
 
 - Deletion Class: not executed; future candidates are `code-retirement` and

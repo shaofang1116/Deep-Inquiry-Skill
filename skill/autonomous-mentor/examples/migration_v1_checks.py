@@ -17,6 +17,7 @@ sys.path.insert(0, str(SKILL_ROOT))
 
 from scripts.knowledge_schema import TopicKnowledge  # noqa: E402
 from scripts.knowledge_store import KnowledgeStore, KnowledgeStoreError  # noqa: E402
+from scripts.v1_import_record import report_v1_import_surface  # noqa: E402
 
 
 def _migrator():
@@ -155,6 +156,9 @@ def _expect_error(error_type, action, expected_fragment: str) -> None:
 
 def main() -> None:
     migrate_v1 = _migrator()
+    surface = report_v1_import_surface()
+    assert "teaching" in surface["provenance_only"]
+    assert "proposition.proposition_text" in surface["mapped"]
 
     with tempfile.TemporaryDirectory(prefix="mentor-v1-import-") as tmp:
         temp_root = Path(tmp)

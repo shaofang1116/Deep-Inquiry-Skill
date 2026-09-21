@@ -22,6 +22,10 @@ non-edits.
   `10-intent.md`.
 - ADR 0002 is clarified with the same window close gate; no public contract is
   changed.
+- Task 2 now has an executable v1 input-surface contract. It separates mapped,
+  provenance-only, and validated-only fields without changing importer parsing
+  or `SessionState`.
+- The v1 input-surface check and existing migration regression check both pass.
 
 ## Evidence Refs
 
@@ -41,9 +45,9 @@ non-edits.
 
 ## Next Step
 
-Do not begin Task 2 in this slice. At or after 2026-10-21, gather the
-observation receipt and release identifier, then execute the separately scoped
-v1 importer-surface proof before the Task 3 decision gate.
+At or after 2026-10-21, gather the observation receipt and release identifier.
+Then use the Task 2 contract with the observation record to enter the Task 3
+decision gate. Do not extract or delete importer/runtime code in that gate.
 
 ## Drift Check Draft
 
@@ -51,7 +55,6 @@ v1 importer-surface proof before the Task 3 decision gate.
 - Compatibility boundary: held. No fallback, owner, adapter, or command was
   added.
 - Retirement track: explicit. No source or state deletion is authorized.
-- Evidence state: focused baseline verification is fresh; external observation
-  remains open.
-- Decision: continue with Task 1 documentation verification, then pause for
-  the scheduled observation window.
+- Evidence state: route/query and importer-surface verification are fresh;
+  external observation remains open.
+- Decision: Task 2 contract slice complete; wait for the window before Task 3.
