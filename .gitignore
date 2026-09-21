@@ -8,4 +8,5 @@ __pycache__/
 
 # Isolated development copies and local release artifacts.
 workspaces/
+.worktrees/
 *.zip
