@@ -6,6 +6,23 @@ Replace the public learning command path with resumable vNext host execution:
 durable topic initialization, one-judgment-per-step recovery, and at-most-once
 durable delta application.
 
+## Execution Status
+
+Completed on the Git integration baseline.
+
+| Task | Status | Evidence |
+| --- | --- | --- |
+| 1. Durable origin and runtime cursor contracts | Complete | `vnext_host_recovery_checks.py` |
+| 2. Idempotent durable topic initialization | Complete | recovery, store, and migration checks |
+| 3. Resumable progression and at-most-once commits | Complete | recovery and autonomous loop checks |
+| 4. Public CLI vNext host routing | Complete | Work-host and route baseline checks |
+| 5. Isolation, ADR, and retirement verification | Complete | isolated caller and sandbox acceptance |
+
+Integration commits: `b433904` captures the canonical M0.5 baseline and
+`06e9ff7` records its Git-baseline revalidation. The next work is not another
+M0.5 implementation task: it requires a separately scoped read-only
+compatibility-window retirement decision under ADR 0002.
+
 ## Architecture
 
 - `KnowledgeStore` remains the only durable writer.
