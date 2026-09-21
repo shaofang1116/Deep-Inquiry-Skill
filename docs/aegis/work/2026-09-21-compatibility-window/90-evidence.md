@@ -23,8 +23,8 @@ Observed on 2026-09-21:
 - The latest local commit was `3accc78`.
 
 Interpretation: there is no release/version identifier at the opening of this
-window. The receipt therefore records a release evidence gap and blocks any
-future retirement decision until a concrete version identifier is supplied.
+window. The receipt therefore blocks only public `ask` retirement; it does not
+block the Task 3 evidence classification of internal surfaces.
 
 ## Public Route Baseline
 
@@ -68,8 +68,10 @@ Passed assertions:
 - Active external dependencies: none demonstrated.
 - Claim allowed now: public ownership and alias behavior retain their verified
   baseline.
-- Claim not allowed now: that no external dependency exists or that any
-  compatibility surface may be retired.
+- Claim not allowed now: that no external dependency exists, or that `ask` may
+  be retired without a declared release/version boundary.
+- Decision allowed now: classify internal legacy surfaces from the available
+  evidence; unknown dependency is not active dependency evidence.
 
 ## v1 Import Surface Contract
 

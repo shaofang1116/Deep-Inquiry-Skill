@@ -2,10 +2,12 @@
 
 ## Status
 
-Draft plan. It archives the remaining work after M0.5 and requires an explicit
-execution approval before any runtime, public command, or legacy source change.
-It does not authorize source deletion, package installation, or persistent-data
-mutation.
+Active plan. Task 1 (compatibility evidence record) and Task 2 (v1 importer
+input-surface proof) are implemented on `docs/compatibility-window`. Task 3 is
+ready for immediate evidence classification; it does not authorize source
+deletion, package installation, or persistent-data mutation. Any runtime,
+public command, or legacy source change still requires a separately approved
+retirement slice.
 
 ## Goal
 
@@ -74,8 +76,8 @@ checks, Git integration baseline, and no model SDK or telemetry service.
 
 ### Assumptions
 
-- The compatibility window needs a documented duration and observation record
-  before public alias or legacy-support retirement.
+- No telemetry or registered external-consumer inventory exists. Waiting for a
+  calendar interval would not produce evidence by itself.
 - No active external dependency has yet been demonstrated.
 
 ### Unknowns That Block Deletion
@@ -88,8 +90,8 @@ checks, Git integration baseline, and no model SDK or telemetry service.
   imports the full teaching-era runtime schema.
 
 Unknown dependency is not active dependency evidence. It does not justify
-retaining a second public owner, but it does require an explicit observation
-window before changing a documented public alias.
+retaining a second public owner or delaying the decision gate. Public alias
+removal remains bound to an actual declared release/version boundary.
 
 ## Compatibility Boundary
 
@@ -115,7 +117,8 @@ window before changing a documented public alias.
 - Retirement / falsifier: any public CLI reference to `MentorLoop`, or any
   importer behavior regression after narrowing its input parser, blocks
   retirement.
-- Verdict: observe first; do not delete code in the compatibility-window setup.
+- Verdict: inspect available evidence now; do not delete code in the
+  compatibility-window setup.
 
 ## Plan Pressure Test
 
@@ -126,9 +129,11 @@ window before changing a documented public alias.
   coverage proves the required field set.
 - Verification scope: command-level route checks, importer fixtures, isolated
   sandbox checks, and an explicit compatibility observation receipt.
-- Task executability: observation setup can proceed independently; source
-  retirement is gated by measured/recorded evidence.
-- Pressure result: proceed with the observation plan; pause before deletion.
+- Task executability: the decision gate can proceed from recorded evidence;
+  source retirement remains gated by a separately approved implementation
+  slice and, for public aliases, a declared release boundary.
+- Pressure result: proceed with the evidence-triggered decision gate; pause
+  before deletion.
 
 ## Plan-Time Complexity Check
 
@@ -170,16 +175,17 @@ Documentation-only. No command, source, package, or persistent state changes.
 
 **Steps**
 
-1. Record the window start from the approved execution date, its release/version
-   boundary, and the named compatibility surfaces: `ask`, former
+1. Record the window start from the approved execution date, the absence or
+   presence of a release/version boundary, and the named compatibility surfaces: `ask`, former
    `state.state`, v1 importer input, and historical evaluator assets.
 2. Define a read-only observation receipt: caller/source identifier when
    available, command name, public envelope version, whether deprecated
    surfaces were requested, and a redaction rule that excludes proposition and
    knowledge content.
-3. State that absence of evidence is sufficient only after the declared window
-   closes; an observed dependency creates a separately documented
-   `compat-exception` with migration target and retirement date.
+3. State that a documented evidence review may classify internal surfaces
+   immediately. An observed dependency creates a separately documented
+   `compat-exception` with migration target and retirement date; public `ask`
+   removal additionally requires a declared release/version boundary.
 4. Run:
 
    ```bash
@@ -257,10 +263,11 @@ sessions, or durable knowledge.
 
 **Steps**
 
-1. At window close, inspect the observation receipt and importer surface report.
+1. Inspect the observation receipt and importer surface report immediately.
 2. Classify each retained surface:
-   - `ask`: retire only when the declared release window closes without active
-     external dependency evidence.
+   - `ask`: select `delete-first` only in a declared release that has no active
+     external dependency evidence; otherwise retain it only through a bounded
+     `compat-exception`.
    - `SessionState`: extract a narrow v1 importer record if it carries
      non-runtime import data; otherwise retain the parser with a new trigger.
    - `MentorLoop` and teaching evaluators: retire only after the importer has no

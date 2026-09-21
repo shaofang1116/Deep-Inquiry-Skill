@@ -26,14 +26,16 @@ durable user knowledge.
 ## Compatibility Window
 
 - Start: 2026-09-21.
-- Minimum observation period: 30 calendar days.
-- Earliest review date: 2026-10-21.
 - Release/version boundary: no Git tag, remote release, or declared public
   version exists at the start of this window. This is an explicit release
   evidence gap, not a default approval to retain compatibility indefinitely.
-- Close condition: after the minimum period, record a concrete release/version
-  identifier, inspect the observation receipt, and make one per-surface
-  decision in Task 3. No source retirement is authorized by this record.
+- Review trigger: execute Task 3 from the recorded evidence now; a calendar
+  delay cannot create evidence because no telemetry or consumer inventory
+  exists.
+- Close condition: make one per-surface decision in Task 3. `ask` cannot be
+  retired until a concrete release/version identifier exists; internal surfaces
+  may be classified immediately. No source retirement is authorized by this
+  record.
 
 The existing instruction that `ask` must be removed before the first subsequent
 major version remains in force. If a major-version boundary is declared before
@@ -77,8 +79,9 @@ the reviewed commit.
 
 An observed active dependency requires a separately documented
 `compat-exception` with its migration target, observation metric, owner, and
-retirement date. No receipt during the open window is only "no observation
-recorded"; it is not absence-of-dependency evidence.
+retirement date. No receipt is only "no observation recorded"; it is not
+absence-of-dependency evidence. It does not block classification of internal
+code, because unknown dependency is not active dependency evidence.
 
 ## Baseline Read Set
 

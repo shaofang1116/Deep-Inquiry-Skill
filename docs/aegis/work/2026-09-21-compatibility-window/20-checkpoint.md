@@ -17,9 +17,8 @@ non-edits.
   HostRuntimeCoordinator -> KnowledgeStore` as the public learning path.
 - The public route baseline check passed from the isolated worktree.
 - The stateless query and `ask` alias check passed from the isolated worktree.
-- The window start, 30-day minimum period, release evidence gap, named
-  compatibility surfaces, receipt schema, and redaction rule are recorded in
-  `10-intent.md`.
+- The evidence-triggered window, release evidence gap, named compatibility
+  surfaces, receipt schema, and redaction rule are recorded in `10-intent.md`.
 - ADR 0002 is clarified with the same window close gate; no public contract is
   changed.
 - Task 2 now has an executable v1 input-surface contract. It separates mapped,
@@ -45,9 +44,9 @@ non-edits.
 
 ## Next Step
 
-At or after 2026-10-21, gather the observation receipt and release identifier.
-Then use the Task 2 contract with the observation record to enter the Task 3
-decision gate. Do not extract or delete importer/runtime code in that gate.
+Execute the Task 3 evidence review now. It may classify internal surfaces from
+existing evidence, but it may not delete `ask` without a declared
+release/version identifier or extract/delete importer/runtime code.
 
 ## Drift Check Draft
 
@@ -57,4 +56,4 @@ decision gate. Do not extract or delete importer/runtime code in that gate.
 - Retirement track: explicit. No source or state deletion is authorized.
 - Evidence state: route/query and importer-surface verification are fresh;
   external observation remains open.
-- Decision: Task 2 contract slice complete; wait for the window before Task 3.
+- Decision: Task 2 contract slice complete; enter Task 3 evidence review now.
