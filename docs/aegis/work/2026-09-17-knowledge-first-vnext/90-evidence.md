@@ -1121,3 +1121,34 @@ Baseline alignment:
 - Residual risk: external consumers that depended on the legacy inner
   `state.state` shape must migrate to the documented vNext host-run reference;
   the outer host envelope and exit classes are preserved.
+
+### Git Integration Baseline Revalidation
+
+Git baseline `b433904` was independently revalidated after canonical source
+and Aegis records were committed:
+
+```bash
+# Launched from a fresh /tmp caller
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/vnext_host_recovery_checks.py
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/autonomous_loop_checks.py
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/work_host_vnext_checks.py
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/query_checks.py
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/migration_v1_checks.py
+python3 /Users/bytedance/主动学习skill/skill/autonomous-mentor/examples/cli_route_baseline_checks.py
+```
+
+All commands exited `0`: recovery 12/12, autonomous loop 5/5, Work-host 5/5,
+query 5/5, migration 8/8, and route baseline 4/4.
+
+Fresh sandbox root `/tmp/autonomous-mentor-m05-task5-git.pzjTTc` copied the
+committed Skill and `docs/aegis` authority tree. Its recovery, Work-host, and
+route checks exited `0` (12/12, 5/5, and 4/4). The sandbox bytecode scan had no
+matches. A first chained sandbox command reported non-zero only because an
+empty `find` result exits `1`; individual command exit checks confirmed the
+actual product checks were green. The final negative checks found neither
+bytecode nor `MentorLoop`, `_run_legacy`, or `_bind_runtime_reference` in the
+public CLI.
+
+Retirement decision is unchanged: public legacy dispatch is retired
+delete-first; legacy source and one-way v1 parsing remain a read-only
+compatibility retention until the ADR 0002 trigger is explicitly planned.

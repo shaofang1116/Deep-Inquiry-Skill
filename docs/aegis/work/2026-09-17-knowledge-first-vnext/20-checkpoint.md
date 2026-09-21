@@ -77,6 +77,11 @@ next action, if requested, is a separate compatibility-window retirement
 decision; it must not delete source or persistent data without a scoped plan
 and confirmation where applicable.
 
+The same acceptance was re-run against Git integration baseline `b433904`:
+the six M0.5 checks passed from a fresh `/tmp` caller, and a new disposable
+sandbox copy passed recovery, public Work-host, and route checks. This refresh
+did not change runtime code, ADR ownership, or the retirement decision.
+
 ## Evidence Refs
 
 - `skill/autonomous-mentor/examples/knowledge_first_acceptance_checks.py`
