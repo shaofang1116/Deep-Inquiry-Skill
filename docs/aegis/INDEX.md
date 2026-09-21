@@ -17,3 +17,5 @@
 
 - `plans/2026-09-18-m05-host-recovery-implementation.md` - strict-TDD M0.5
   implementation and verification plan.
+- `plans/2026-09-21-post-m05-compatibility-window-retirement.md` - draft
+  evidence-gated compatibility-window and legacy retirement plan.
