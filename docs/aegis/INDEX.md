@@ -21,6 +21,8 @@
   implementation and verification plan.
 - `plans/2026-09-21-post-m05-compatibility-window-retirement.md` - active
   evidence-gated compatibility-window and legacy retirement plan.
+- `plans/2026-09-22-publication-lifecycle-and-test-layering-implementation.md`
+  - implementation plan for durable publication lifecycle and four-layer tests.
 
 ## Reports
 
