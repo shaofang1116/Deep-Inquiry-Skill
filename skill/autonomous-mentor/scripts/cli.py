@@ -310,7 +310,7 @@ def _run_demo() -> int:
     skill_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     examples = os.path.join(skill_root, "examples")
     sys.path.insert(0, examples)
-    import smoke_run  # type: ignore
+    from tests.adapter import smoke_run
 
     smoke_run.main()
     return 0

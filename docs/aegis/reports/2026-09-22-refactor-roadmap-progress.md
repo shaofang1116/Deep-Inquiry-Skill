@@ -82,7 +82,7 @@ Evidence:
 
 - `docs/aegis/specs/2026-09-18-m0-cli-route-golden.json`
 - `docs/aegis/adr/0002-vnext-default-entry-retirement.md`
-- `skill/autonomous-mentor/examples/cli_route_baseline_checks.py`
+- `skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py`
 
 Current verification: route baseline passed **4/4**.
 
@@ -106,8 +106,8 @@ Evidence:
 
 - `skill/autonomous-mentor/scripts/vnext_host.py`
 - `skill/autonomous-mentor/scripts/autonomous_runtime.py`
-- `skill/autonomous-mentor/examples/vnext_host_recovery_checks.py`
-- `skill/autonomous-mentor/examples/work_host_contract_checks.py`
+- `skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py`
+- `skill/autonomous-mentor/examples/tests/adapter/work_host_contract_checks.py`
 
 Current verification: host recovery passed **12/12**.
 
@@ -138,8 +138,8 @@ Evidence:
 - `skill/autonomous-mentor/scripts/knowledge_schema.py`
 - `skill/autonomous-mentor/scripts/knowledge_store.py`
 - `skill/autonomous-mentor/scripts/autonomous_runtime.py`
-- `skill/autonomous-mentor/examples/learning_delta_checks.py`
-- `skill/autonomous-mentor/examples/convergence_checks.py`
+- `skill/autonomous-mentor/examples/tests/core_contract/learning_delta_checks.py`
+- `skill/autonomous-mentor/examples/tests/core_contract/convergence_checks.py`
 
 Gap against the reference design:
 
@@ -169,8 +169,8 @@ Evidence:
 - `docs/aegis/adr/0001-one-way-v1-import-boundary.md`
 - `skill/autonomous-mentor/scripts/migrate_v1.py`
 - `skill/autonomous-mentor/scripts/v1_import_record.py`
-- `skill/autonomous-mentor/examples/migration_v1_checks.py`
-- `skill/autonomous-mentor/examples/v1_import_surface_checks.py`
+- `skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py`
+- `skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py`
 
 Current verification: v1 migration passed **8/8**; the input-surface contract
 also passed.
@@ -233,11 +233,11 @@ Remaining conditions for a final roadmap freeze:
 The following commands were re-run from the isolated worktree for this report:
 
 ```bash
-python3 skill/autonomous-mentor/examples/cli_route_baseline_checks.py
-python3 skill/autonomous-mentor/examples/query_checks.py
-python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
-python3 skill/autonomous-mentor/examples/migration_v1_checks.py
-python3 skill/autonomous-mentor/examples/vnext_host_recovery_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py
 ```
 
 Results:

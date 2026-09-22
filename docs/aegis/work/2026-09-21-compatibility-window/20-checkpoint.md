@@ -31,8 +31,8 @@ non-edits.
 - `docs/aegis/work/2026-09-21-compatibility-window/10-intent.md`
 - `docs/aegis/work/2026-09-21-compatibility-window/90-evidence.md`
 - `docs/aegis/specs/2026-09-18-m0-cli-route-golden.json`
-- `skill/autonomous-mentor/examples/cli_route_baseline_checks.py`
-- `skill/autonomous-mentor/examples/query_checks.py`
+- `skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py`
+- `skill/autonomous-mentor/examples/tests/adapter/query_checks.py`
 
 ## Blocked-On Items
 

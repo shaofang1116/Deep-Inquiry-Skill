@@ -189,8 +189,8 @@ Documentation-only. No command, source, package, or persistent state changes.
 4. Run:
 
    ```bash
-   python3 skill/autonomous-mentor/examples/cli_route_baseline_checks.py
-   python3 skill/autonomous-mentor/examples/query_checks.py
+   python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
+   python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
    ```
 
    Expected: public owners and `ask` alias behavior remain unchanged.
@@ -200,8 +200,8 @@ Documentation-only. No command, source, package, or persistent state changes.
 
 **Files**
 
-- Create: `skill/autonomous-mentor/examples/v1_import_surface_checks.py`
-- Modify: `skill/autonomous-mentor/examples/migration_v1_checks.py`
+- Create: `skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py`
+- Modify: `skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py`
 - Potentially create: `skill/autonomous-mentor/scripts/v1_import_record.py`
 - Potentially modify: `skill/autonomous-mentor/scripts/migrate_v1.py`
 
@@ -225,7 +225,7 @@ immutable source-hash protection, and evolved-topic overwrite rejection.
 2. Run:
 
    ```bash
-   python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
+   python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
    ```
 
    Expected: fail because the explicit importer surface contract does not yet
@@ -235,8 +235,8 @@ immutable source-hash protection, and evolved-topic overwrite rejection.
 4. Run:
 
    ```bash
-   python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
-   python3 skill/autonomous-mentor/examples/migration_v1_checks.py
+   python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
+   python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
    ```
 
    Expected: both exit 0 and preserve all existing importer cases.
@@ -315,12 +315,12 @@ Persistent user state is out of scope and may not be deleted.
 Before declaring any retirement slice complete:
 
 ```bash
-python3 skill/autonomous-mentor/examples/vnext_host_recovery_checks.py
-python3 skill/autonomous-mentor/examples/autonomous_loop_checks.py
-python3 skill/autonomous-mentor/examples/work_host_vnext_checks.py
-python3 skill/autonomous-mentor/examples/query_checks.py
-python3 skill/autonomous-mentor/examples/migration_v1_checks.py
-python3 skill/autonomous-mentor/examples/cli_route_baseline_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py
+python3 skill/autonomous-mentor/examples/tests/behavior/autonomous_loop_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/work_host_vnext_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
 ```
 
 Run the relevant new compatibility-window and v1-import-surface checks, then

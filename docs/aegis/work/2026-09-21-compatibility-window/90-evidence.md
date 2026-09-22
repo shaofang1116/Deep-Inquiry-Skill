@@ -31,7 +31,7 @@ block the Task 3 evidence classification of internal surfaces.
 Command:
 
 ```bash
-python3 skill/autonomous-mentor/examples/cli_route_baseline_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
 ```
 
 Result: exit `0`.
@@ -48,7 +48,7 @@ Passed assertions:
 Command:
 
 ```bash
-python3 skill/autonomous-mentor/examples/query_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
 ```
 
 Result: exit `0`.
@@ -78,7 +78,7 @@ Passed assertions:
 RED command:
 
 ```bash
-python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
 ```
 
 Initial result: exit `1` because `scripts.v1_import_record` did not exist.
@@ -87,8 +87,8 @@ The failure reached the intended missing explicit contract, not importer setup.
 GREEN commands:
 
 ```bash
-python3 skill/autonomous-mentor/examples/v1_import_surface_checks.py
-python3 skill/autonomous-mentor/examples/migration_v1_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
 ```
 
 Final result: both exit `0`.

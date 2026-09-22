@@ -134,7 +134,7 @@ Unknowns and stop conditions:
 - Modify: `skill/autonomous-mentor/scripts/knowledge_store.py`
 - Modify: `skill/autonomous-mentor/scripts/learner.py`
 - Create: `skill/autonomous-mentor/examples/tests/core_contract/publication_lifecycle_checks.py`
-- Move: `skill/autonomous-mentor/examples/learning_delta_checks.py` to
+- Move: `skill/autonomous-mentor/examples/tests/core_contract/learning_delta_checks.py` to
   `skill/autonomous-mentor/examples/tests/core_contract/learning_delta_checks.py`
 - Create: `docs/aegis/adr/0003-publication-audit-journal.md`
 
@@ -204,8 +204,8 @@ history.
    ```bash
    python3 skill/autonomous-mentor/examples/tests/core_contract/publication_lifecycle_checks.py
    python3 skill/autonomous-mentor/examples/tests/core_contract/learning_delta_checks.py
-   python3 skill/autonomous-mentor/examples/knowledge_store_checks.py
-   python3 skill/autonomous-mentor/examples/convergence_checks.py
+   python3 skill/autonomous-mentor/examples/tests/core_contract/knowledge_store_checks.py
+   python3 skill/autonomous-mentor/examples/tests/core_contract/convergence_checks.py
    ```
 
    Expected: lifecycle cases pass; existing delta/store/convergence semantics
@@ -227,10 +227,10 @@ writer or mark a topic published without the matching record.
 - Modify: `skill/autonomous-mentor/scripts/vnext_host.py` only if its outcome
   projection needs the terminal publication result
 - Move and modify:
-  `skill/autonomous-mentor/examples/vnext_host_recovery_checks.py` to
+  `skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py` to
   `skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py`
 - Move and modify:
-  `skill/autonomous-mentor/examples/autonomous_loop_checks.py` to
+  `skill/autonomous-mentor/examples/tests/behavior/autonomous_loop_checks.py` to
   `skill/autonomous-mentor/examples/tests/behavior/autonomous_loop_checks.py`
 - Create:
   `skill/autonomous-mentor/examples/tests/adapter/publication_host_recovery_checks.py`
@@ -283,8 +283,8 @@ pending/error outcome without appending a false convergence record.
    python3 skill/autonomous-mentor/examples/tests/adapter/publication_host_recovery_checks.py
    python3 skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py
    python3 skill/autonomous-mentor/examples/tests/behavior/autonomous_loop_checks.py
-   python3 skill/autonomous-mentor/examples/work_host_vnext_checks.py
-   python3 skill/autonomous-mentor/examples/cli_route_baseline_checks.py
+   python3 skill/autonomous-mentor/examples/tests/adapter/work_host_vnext_checks.py
+   python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
    ```
 
    Expected: recovery is at-most-once for both topic and audit chain; public
@@ -322,7 +322,7 @@ not a local patch.
 - Create: `skill/autonomous-mentor/examples/tests/layer_manifest.json`
 - Create: `skill/autonomous-mentor/examples/tests/run_layer.py`
 - Modify:
-  `skill/autonomous-mentor/examples/package_vnext_checks.py`
+  `skill/autonomous-mentor/examples/tests/adapter/package_vnext_checks.py`
 - Modify:
   `skill/autonomous-mentor/sessions/knowledge-first-vnext/validation_manifest.json`
 - Modify active sources/docs that execute checks:
@@ -423,7 +423,7 @@ of `extract`, `retain with trigger`, or `defer with evidence gap`.
 
    ```bash
    python3 skill/autonomous-mentor/examples/tests/run_layer.py --all
-   python3 skill/autonomous-mentor/examples/package_vnext_checks.py
+   python3 skill/autonomous-mentor/examples/tests/adapter/package_vnext_checks.py
    ```
 
    Expected: all layer modules and package checks pass from a rebuilt sandbox;
@@ -490,7 +490,7 @@ Task-specific RED/GREEN commands are defined above. The final gate is:
 
 ```bash
 python3 skill/autonomous-mentor/examples/tests/run_layer.py --all
-python3 skill/autonomous-mentor/examples/package_vnext_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/package_vnext_checks.py
 ```
 
 plus fresh-caller public route, query, migration, and bytecode checks from Task

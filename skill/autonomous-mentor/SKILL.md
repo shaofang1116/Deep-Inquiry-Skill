@@ -86,10 +86,11 @@ autonomous-mentor/
 │   ├── loop.py / convergence.py / learner.py / compressor.py
 │   └── schema.py / store.py / mentor.py   # v1 importer 兼容边界
 └── examples/                # Tier 3 自检资产：样例、确定性夹具、端到端冒烟
-    ├── smoke_run.py         # 单命题端到端冒烟（6 组断言）
-    ├── eval_suite.py        # 阶段三 eval：三类命题同一把尺子（退出码 0/1）
-    └── eval/                # CasePack 用例协议 + ScriptedHost 泛化宿主 + runner
-        └── cases/           # mechanism 机制型 / concept 概念型 / controversy 争议型
+    └── tests/               # 按责任分层的可执行检查与夹具
+        ├── core_contract/   # schema、store、index、lifecycle、convergence
+        ├── behavior/        # learning loop、eval、real-host 与 judge
+        ├── migration/       # v1 importer
+        └── adapter/         # CLI、query、host、package 与 smoke
 ```
 
 判断所需的全部上下文（指令、状态快照、响应模板、必填字段）都在运行时的 `request.json`
@@ -149,11 +150,11 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 - `status: "done"` 表示本轮完成：结果在输出的 `trace.result` 中，状态已落库，运行时文件已清空。
 
 中途可 `cancel` 放弃当前轮次（只清运行时文件，不动 session.json）；
-`state` 查看持久化状态；`demo` 运行端到端冒烟（由 `examples/scripted_judge.py`
+`state` 查看持久化状态；`demo` 运行端到端冒烟（由 `examples/tests/behavior/scripted_judge.py`
 确定性夹具代填判断，仅供离线验证，**不是生产路径，真实运行时禁止照抄它的内容**）。
 多命题并行时，用 `--state <路径>/session.json` 为每个命题指定独立状态文件。
 
-**vNext 默认 eval**：`python3 examples/eval_suite.py` 依次验证 convergence owner、
+**vNext 默认 eval**：`python3 examples/tests/behavior/eval_suite.py` 依次验证 convergence owner、
 至少三轮的 autonomous loop，以及 stateless query/`ask` alias。默认 trace 和结果不得出现
 `assess_user`、`plan_teaching`、`teach_reply` 或 `feedback`。旧教学 CasePack 仅保留为
 Task 10 的 v1 importer 兼容证据，不再由默认 smoke/eval 执行。

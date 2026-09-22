@@ -17,7 +17,7 @@ SKILL_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(SKILL_ROOT))
 sys.path.insert(0, str(SKILL_ROOT / "examples"))
 
-from fixtures.knowledge_first_cases import complete_topic  # noqa: E402
+from tests.fixtures.knowledge_first_cases import complete_topic  # noqa: E402
 from scripts.knowledge_schema import TopicKnowledge  # noqa: E402
 from scripts.knowledge_store import KnowledgeStore, KnowledgeStoreError  # noqa: E402
 

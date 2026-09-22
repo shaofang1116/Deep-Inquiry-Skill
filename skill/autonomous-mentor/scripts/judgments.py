@@ -8,7 +8,7 @@
 - 内核对响应做**形状校验 + 规则校验**：必填字段、枚举取值、简审四问完整性等。
   判断内容由模型负责，结构合法性由内核负责。
 
-离线冒烟时由 examples/scripted_judge.py 这个确定性夹具代替 agent 填表，
+离线冒烟时由 examples/tests/behavior/scripted_judge.py 这个确定性夹具代替 agent 填表，
 它不是生产路径，只是让循环无需模型也能被验证。
 """
 
