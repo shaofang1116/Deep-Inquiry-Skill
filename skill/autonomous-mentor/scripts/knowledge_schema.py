@@ -55,6 +55,14 @@ class ConvergencePhase(str, Enum):
     POST_BASELINE = "post_baseline"
 
 
+class PublicationState(str, Enum):
+    PROPOSED = "proposed"
+    REVIEWED = "reviewed"
+    PUBLISHED = "published"
+    REJECTED = "rejected"
+    RETIRED = "retired"
+
+
 def _required_text(value: Any, field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise KnowledgeSchemaError(f"{field_name} must be a non-empty string")
@@ -69,6 +77,26 @@ def _enum_value(value: Any, enum_type: type[Enum], field_name: str) -> str:
             f"{field_name} has invalid value {value!r}; expected {sorted(allowed)}"
         )
     return raw
+
+
+def _json_object(value: Any, field_name: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise KnowledgeSchemaError(f"{field_name} must be an object")
+    try:
+        encoded = json.dumps(
+            value,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        decoded = json.loads(encoded)
+    except (TypeError, ValueError) as exc:
+        raise KnowledgeSchemaError(
+            f"{field_name} must contain JSON-compatible values"
+        ) from exc
+    if not isinstance(decoded, dict):
+        raise KnowledgeSchemaError(f"{field_name} must be an object")
+    return decoded
 
 
 def _string_list(value: Any, field_name: str) -> list[str]:
@@ -496,6 +524,140 @@ class ConvergenceAssessment:
         )
         assessment.validate()
         return assessment
+
+
+@dataclass
+class PublicationRecord:
+    schema_version: int
+    record_id: str
+    candidate_id: str
+    topic_id: str
+    state: str
+    base_version: int
+    created_at: str
+    delta: dict[str, Any]
+    integration: dict[str, Any]
+    review: dict[str, Any] | None
+    rejection: dict[str, str] | None
+    published_version: int | None
+
+    def validate(self) -> None:
+        self.schema_version = _int_at_least(
+            self.schema_version, 1, "publication_record.schema_version"
+        )
+        self.record_id = _required_text(
+            self.record_id, "publication_record.record_id"
+        )
+        self.candidate_id = _required_text(
+            self.candidate_id, "publication_record.candidate_id"
+        )
+        self.topic_id = _required_text(
+            self.topic_id, "publication_record.topic_id"
+        )
+        self.state = _enum_value(
+            self.state, PublicationState, "publication_record.state"
+        )
+        self.base_version = _int_at_least(
+            self.base_version, 1, "publication_record.base_version"
+        )
+        self.created_at = _required_text(
+            self.created_at, "publication_record.created_at"
+        )
+        self.delta = _json_object(self.delta, "publication_record.delta")
+        self.integration = _json_object(
+            self.integration, "publication_record.integration"
+        )
+        if self.review is not None:
+            self.review = _json_object(
+                self.review, "publication_record.review"
+            )
+        if self.rejection is not None:
+            self.rejection = _json_object(
+                self.rejection, "publication_record.rejection"
+            )
+            code = self.rejection.get("code")
+            reason = self.rejection.get("reason")
+            if not isinstance(code, str) or not code.strip():
+                raise KnowledgeSchemaError(
+                    "publication_record.rejection.code must be non-empty"
+                )
+            if not isinstance(reason, str) or not reason.strip():
+                raise KnowledgeSchemaError(
+                    "publication_record.rejection.reason must be non-empty"
+                )
+        if self.published_version is not None:
+            self.published_version = _int_at_least(
+                self.published_version,
+                1,
+                "publication_record.published_version",
+            )
+
+        if self.state == PublicationState.PROPOSED.value:
+            if self.review is not None or self.rejection is not None:
+                raise KnowledgeSchemaError(
+                    "proposed record cannot contain review or rejection"
+                )
+        elif self.state == PublicationState.REVIEWED.value:
+            if self.review is None or self.rejection is not None:
+                raise KnowledgeSchemaError(
+                    "reviewed record requires review and no rejection"
+                )
+        elif self.state == PublicationState.PUBLISHED.value:
+            if self.review is None or self.published_version is None:
+                raise KnowledgeSchemaError(
+                    "published record requires review and published_version"
+                )
+            if self.rejection is not None:
+                raise KnowledgeSchemaError(
+                    "published record cannot contain rejection"
+                )
+        elif self.state == PublicationState.REJECTED.value:
+            if self.rejection is None or self.published_version is not None:
+                raise KnowledgeSchemaError(
+                    "rejected record requires rejection and no published_version"
+                )
+        elif self.state == PublicationState.RETIRED.value:
+            if self.published_version is None:
+                raise KnowledgeSchemaError(
+                    "retired record requires published_version"
+                )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "record_id": self.record_id,
+            "candidate_id": self.candidate_id,
+            "topic_id": self.topic_id,
+            "state": self.state,
+            "base_version": self.base_version,
+            "created_at": self.created_at,
+            "delta": dict(self.delta),
+            "integration": dict(self.integration),
+            "review": None if self.review is None else dict(self.review),
+            "rejection": (
+                None if self.rejection is None else dict(self.rejection)
+            ),
+            "published_version": self.published_version,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PublicationRecord":
+        record = cls(
+            schema_version=data.get("schema_version", 0),
+            record_id=data.get("record_id", ""),
+            candidate_id=data.get("candidate_id", ""),
+            topic_id=data.get("topic_id", ""),
+            state=data.get("state", ""),
+            base_version=data.get("base_version", 0),
+            created_at=data.get("created_at", ""),
+            delta=data.get("delta", {}),
+            integration=data.get("integration", {}),
+            review=data.get("review"),
+            rejection=data.get("rejection"),
+            published_version=data.get("published_version"),
+        )
+        record.validate()
+        return record
 
 
 @dataclass

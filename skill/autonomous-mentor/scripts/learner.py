@@ -405,20 +405,13 @@ class Learner:
 
         return judgment
 
-    def apply_knowledge_delta(
+    def build_knowledge_candidate(
         self,
-        store: KnowledgeStore,
-        topic_id: str,
+        current: TopicKnowledge,
         *,
-        base_version: int,
         update: dict[str, Any],
     ) -> TopicKnowledge:
-        """Validate and atomically apply one auditable durable delta."""
-        current = store.load(topic_id)
-        if current.topic_id != topic_id:
-            raise ValueError(
-                f"loaded topic {current.topic_id!r} does not match {topic_id!r}"
-            )
+        """Construct one validated next projection without durable I/O."""
         next_version = current.version + 1
         delta = LearningDelta.from_dict(update.get("delta", {}))
         _validate_disjoint_claim_actions(delta)
@@ -550,6 +543,23 @@ class Learner:
             }
         )
         candidate = TopicKnowledge.from_dict(candidate_payload)
+        return candidate
+
+    def apply_knowledge_delta(
+        self,
+        store: KnowledgeStore,
+        topic_id: str,
+        *,
+        base_version: int,
+        update: dict[str, Any],
+    ) -> TopicKnowledge:
+        """Validate and atomically apply one auditable durable delta."""
+        current = store.load(topic_id)
+        if current.topic_id != topic_id:
+            raise ValueError(
+                f"loaded topic {current.topic_id!r} does not match {topic_id!r}"
+            )
+        candidate = self.build_knowledge_candidate(current, update=update)
         return store.save(candidate, base_version=base_version)
 
     @staticmethod

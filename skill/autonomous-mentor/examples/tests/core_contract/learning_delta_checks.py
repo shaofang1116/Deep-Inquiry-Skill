@@ -9,7 +9,7 @@ import tempfile
 
 sys.dont_write_bytecode = True
 
-SKILL_ROOT = Path(__file__).resolve().parent.parent
+SKILL_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(SKILL_ROOT))
 
 from scripts.knowledge_schema import TopicKnowledge  # noqa: E402

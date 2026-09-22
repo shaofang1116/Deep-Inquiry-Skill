@@ -11,7 +11,12 @@ from pathlib import Path
 import tempfile
 from typing import Any, Iterator
 
-from .knowledge_schema import KnowledgeSchemaError, TopicKnowledge
+from .knowledge_schema import (
+    KnowledgeSchemaError,
+    PublicationRecord,
+    PublicationState,
+    TopicKnowledge,
+)
 
 
 class KnowledgeStoreError(RuntimeError):
@@ -93,6 +98,17 @@ class KnowledgeStore:
         with self._topic_lock(topic_dir):
             return self._load_unlocked(topic_dir, recover_current=True)
 
+    def load_version(self, topic_id: str, version: int) -> TopicKnowledge:
+        """Load one immutable topic snapshot for lifecycle recovery."""
+        topic_dir = self._topic_dir(topic_id)
+        path = self._snapshot_path(topic_dir, version)
+        try:
+            return self._decode_topic(path.read_bytes(), path)
+        except OSError as exc:
+            raise IntegrityError(
+                f"snapshot missing for topic {topic_id!r} version {version}: {path}"
+            ) from exc
+
     def save(
         self,
         topic: TopicKnowledge,
@@ -127,6 +143,188 @@ class KnowledgeStore:
         except OSError as exc:
             raise self._root_error(exc) from exc
         return saved
+
+    def commit_lifecycle(
+        self,
+        topic_id: str,
+        *,
+        candidate_id: str,
+        records: list[PublicationRecord],
+        published_topic: TopicKnowledge | None = None,
+    ) -> tuple[TopicKnowledge, PublicationRecord]:
+        """Append immutable lifecycle records and optionally publish one snapshot."""
+        if not records:
+            raise KnowledgeStoreError("lifecycle transaction requires records")
+        if any(
+            record.topic_id != topic_id
+            or record.candidate_id != candidate_id
+            for record in records
+        ):
+            raise KnowledgeStoreError(
+                "lifecycle records must match the requested topic and candidate"
+            )
+        for record in records:
+            record.validate()
+
+        topic_dir = self._prepare_topic_dir(topic_id)
+        try:
+            with self._topic_lock(topic_dir):
+                current = self._load_unlocked(topic_dir, recover_current=True)
+                existing = self._audit_records(topic_dir, candidate_id)
+                terminal = next(
+                    (
+                        record
+                        for record in existing
+                        if record.state
+                        in {
+                            PublicationState.PUBLISHED.value,
+                            PublicationState.REJECTED.value,
+                            PublicationState.RETIRED.value,
+                        }
+                    ),
+                    None,
+                )
+                if terminal is not None:
+                    return current, terminal
+
+                existing_states = {record.state for record in existing}
+                for record in records:
+                    if record.state in existing_states:
+                        continue
+                    if record.state in {
+                        PublicationState.PUBLISHED.value,
+                        PublicationState.RETIRED.value,
+                    }:
+                        if published_topic is None:
+                            raise KnowledgeStoreError(
+                                "terminal lifecycle record requires topic snapshot"
+                            )
+                        current = self._save_lifecycle_snapshot(
+                            topic_dir, current, published_topic, record
+                        )
+                    appended = self._append_audit_record(topic_dir, record)
+                    existing_states.add(appended.state)
+                    if appended.state in {
+                        PublicationState.PUBLISHED.value,
+                        PublicationState.REJECTED.value,
+                        PublicationState.RETIRED.value,
+                    }:
+                        terminal = appended
+                if terminal is None:
+                    raise KnowledgeStoreError(
+                        "lifecycle transaction requires a terminal record"
+                    )
+                return current, terminal
+        except KnowledgeStoreError:
+            raise
+        except OSError as exc:
+            raise self._root_error(exc) from exc
+
+    def lifecycle_terminal(
+        self, topic_id: str, candidate_id: str
+    ) -> tuple[TopicKnowledge, PublicationRecord] | None:
+        """Return an existing terminal record without mutating the journal."""
+        topic_dir = self._prepare_topic_dir(topic_id)
+        try:
+            with self._topic_lock(topic_dir):
+                current = self._load_unlocked(topic_dir, recover_current=True)
+                for record in self._audit_records(topic_dir, candidate_id):
+                    if record.state in {
+                        PublicationState.PUBLISHED.value,
+                        PublicationState.REJECTED.value,
+                        PublicationState.RETIRED.value,
+                    }:
+                        return current, record
+        except KnowledgeStoreError:
+            raise
+        except OSError as exc:
+            raise self._root_error(exc) from exc
+        return None
+
+    def _save_lifecycle_snapshot(
+        self,
+        topic_dir: Path,
+        current: TopicKnowledge,
+        topic: TopicKnowledge,
+        record: PublicationRecord,
+    ) -> TopicKnowledge:
+        topic.validate()
+        if topic.created_at != current.created_at:
+            raise KnowledgeStoreError(
+                "topic created_at cannot change during publication"
+            )
+        if record.base_version != current.version:
+            if topic.version != current.version:
+                raise VersionConflictError(
+                    f"stale base version {record.base_version}; "
+                    f"current version is {current.version}"
+                )
+            snapshot_path = self._snapshot_path(topic_dir, topic.version)
+            encoded = canonical_json_bytes(topic.to_dict())
+            if not snapshot_path.is_file() or (
+                sha256_bytes(snapshot_path.read_bytes()) != sha256_bytes(encoded)
+            ):
+                raise VersionConflictError(
+                    "published snapshot does not match the candidate for "
+                    f"base version {record.base_version}"
+                )
+            return current
+
+        payload = topic.to_dict()
+        payload["version"] = current.version + 1
+        saved = TopicKnowledge.from_dict(payload)
+        if record.published_version != saved.version:
+            raise KnowledgeStoreError(
+                "published lifecycle version does not match next topic version"
+            )
+        encoded = canonical_json_bytes(saved.to_dict())
+        self._write_snapshot(topic_dir, saved.version, encoded)
+        self._atomic_write(topic_dir / "knowledge.json", encoded)
+        return saved
+
+    def _audit_records(
+        self, topic_dir: Path, candidate_id: str
+    ) -> list[PublicationRecord]:
+        audit_dir = topic_dir / "audit"
+        if not audit_dir.is_dir():
+            return []
+        records: list[PublicationRecord] = []
+        for path in sorted(audit_dir.glob("*.json")):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(raw, dict):
+                    raise ValueError("top level must be an object")
+                record = PublicationRecord.from_dict(raw)
+            except (
+                OSError,
+                ValueError,
+                json.JSONDecodeError,
+                KnowledgeSchemaError,
+            ) as exc:
+                raise IntegrityError(
+                    f"invalid immutable audit record {path}: {exc}"
+                ) from exc
+            if record.candidate_id == candidate_id:
+                records.append(record)
+        return records
+
+    def _append_audit_record(
+        self, topic_dir: Path, record: PublicationRecord
+    ) -> PublicationRecord:
+        audit_dir = topic_dir / "audit"
+        audit_dir.mkdir(parents=True, exist_ok=True)
+        sequence = len(list(audit_dir.glob("*.json"))) + 1
+        payload = record.to_dict()
+        payload["record_id"] = (
+            f"{sequence:06d}-{record.candidate_id}-{record.state}"
+        )
+        appended = PublicationRecord.from_dict(payload)
+        self._atomic_write(
+            audit_dir / f"{sequence:06d}-{record.candidate_id}-{record.state}.json",
+            canonical_json_bytes(appended.to_dict()),
+            exclusive=True,
+        )
+        return appended
 
     def _load_unlocked(
         self,

@@ -32,7 +32,7 @@ CHECKS = (
     "examples/knowledge_schema_checks.py",
     "examples/knowledge_store_checks.py",
     "examples/index_rebuild_checks.py",
-    "examples/learning_delta_checks.py",
+    "examples/tests/core_contract/learning_delta_checks.py",
     "examples/convergence_checks.py",
     "examples/autonomous_loop_checks.py",
     "examples/knowledge_first_acceptance_checks.py",
