@@ -11,6 +11,7 @@ sys.dont_write_bytecode = True
 
 SKILL_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(SKILL_ROOT))
+sys.path.insert(0, str(SKILL_ROOT / "examples"))
 
 from scripts.knowledge_schema import TopicKnowledge  # noqa: E402
 from scripts.knowledge_store import KnowledgeStore  # noqa: E402

@@ -7,7 +7,9 @@ import sys
 
 sys.dont_write_bytecode = True
 
-from autonomous_loop_checks import main as run_autonomous_loop
+from tests.behavior.autonomous_loop_checks import (
+    main as run_autonomous_loop,
+)
 from query_checks import main as run_stateless_query
 
 

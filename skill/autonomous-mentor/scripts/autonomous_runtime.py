@@ -20,7 +20,7 @@ from .judgments import (
 )
 from .knowledge_schema import ConvergenceAssessment, KnowledgeSchemaError, TopicKnowledge
 from .knowledge_store import KnowledgeStore, KnowledgeStoreError
-from .learner import Learner
+from .knowledge_publisher import KnowledgePublisher
 from .convergence import evaluate_convergence
 
 
@@ -324,7 +324,7 @@ class HostRuntimeCoordinator:
 
     def __init__(self, store: KnowledgeStore):
         self.store = store
-        self.learner = Learner()
+        self.publisher = KnowledgePublisher(store)
 
     def begin_initialization(
         self,
@@ -504,7 +504,7 @@ class HostRuntimeCoordinator:
         return self._next_cursor(cursor, "checkpoint_or_complete", payload)
 
     def commit_learning(self, cursor: PendingCursor) -> PendingCursor:
-        """Apply one durable delta exactly once, then project assessment."""
+        """Publish one durable candidate, then project its next host stage."""
         cursor.validate()
         if cursor.stage != "commit_learning" or not cursor.commit_marker:
             raise RuntimeContractError("commit_learning requires a marked cursor")
@@ -512,27 +512,55 @@ class HostRuntimeCoordinator:
         if self._commit_marker(cursor.payload) != cursor.commit_marker:
             raise RuntimeContractError("commit marker does not match payload")
 
-        current = self.store.load(cursor.topic_id)
-        if current.version == cursor.expected_version:
-            integration = dict(cursor.payload["integration"])
-            integration["cycle"] = cursor.payload["cycle"]
-            integration["skeptic_structural_hit"] = cursor.payload[
-                "structural_hit"
-            ]
-            try:
-                current = self.learner.apply_knowledge_delta(
-                    self.store,
-                    cursor.topic_id,
-                    base_version=cursor.expected_version,
-                    update=integration,
-                )
-            except (KnowledgeStoreError, ValueError, KeyError) as exc:
-                raise RuntimeContractError(
-                    f"durable learning commit failed: {exc}"
-                ) from exc
-        elif not self._commit_already_applied(current, cursor):
+        integration = dict(cursor.payload["integration"])
+        integration["cycle"] = cursor.payload["cycle"]
+        integration["skeptic_structural_hit"] = cursor.payload["structural_hit"]
+        review = {
+            "approved": not cursor.payload["structural_hit"],
+            "structural_hit": cursor.payload["structural_hit"],
+            "reason": (
+                "Skeptic structural review rejected the candidate."
+                if cursor.payload["structural_hit"]
+                else "Skeptic structural review accepted the candidate."
+            ),
+        }
+        try:
+            outcome = self.publisher.publish_or_reject(
+                topic_id=cursor.topic_id,
+                base_version=cursor.expected_version,
+                candidate=integration,
+                review=review,
+                candidate_id=cursor.commit_marker,
+            )
+        except (KnowledgeStoreError, ValueError, KeyError) as exc:
             raise RuntimeContractError(
-                "canonical topic does not match pending commit marker"
+                f"durable learning commit failed: {exc}"
+            ) from exc
+
+        if outcome.state == "rejected":
+            current = self.store.load(cursor.topic_id)
+            if current.version != cursor.expected_version:
+                raise RuntimeContractError(
+                    "rejected candidate conflicts with canonical topic version"
+                )
+            return self._cursor_from_cursor(
+                cursor,
+                stage="integrate_learning",
+                expected_version=current.version,
+                payload={
+                    "cycle": cursor.payload["cycle"],
+                    "selected_gap": cursor.payload["selected_gap"],
+                    "plan": cursor.payload["plan"],
+                },
+            )
+        if outcome.state != "published" or outcome.topic is None:
+            raise RuntimeContractError(
+                f"unexpected publication terminal state {outcome.state!r}"
+            )
+        current = outcome.topic
+        if current.version != cursor.expected_version + 1:
+            raise RuntimeContractError(
+                "published topic version does not match pending commit marker"
             )
 
         payload = {
@@ -674,26 +702,6 @@ class HostRuntimeCoordinator:
             payload, ensure_ascii=False, sort_keys=True
         ).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
-
-    @staticmethod
-    def _commit_already_applied(
-        topic: TopicKnowledge,
-        cursor: PendingCursor,
-    ) -> bool:
-        if topic.version != cursor.expected_version + 1:
-            return False
-        if not topic.convergence_history:
-            return False
-        record = topic.convergence_history[-1]
-        integration = cursor.payload["integration"]
-        return (
-            record.cycle == cursor.payload["cycle"]
-            and record.delta.to_dict() == integration["delta"]
-            and record.phase == integration["phase"]
-            and record.gain_level == integration["gain_level"]
-            and record.skeptic_structural_hit
-            == cursor.payload["structural_hit"]
-        )
 
     def _validate_store_root(self, run: HostRun) -> None:
         run.validate()

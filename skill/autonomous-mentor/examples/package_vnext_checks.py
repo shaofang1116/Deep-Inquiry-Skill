@@ -34,7 +34,7 @@ CHECKS = (
     "examples/index_rebuild_checks.py",
     "examples/tests/core_contract/learning_delta_checks.py",
     "examples/convergence_checks.py",
-    "examples/autonomous_loop_checks.py",
+    "examples/tests/behavior/autonomous_loop_checks.py",
     "examples/knowledge_first_acceptance_checks.py",
     "examples/query_checks.py",
     "examples/work_host_vnext_checks.py",
