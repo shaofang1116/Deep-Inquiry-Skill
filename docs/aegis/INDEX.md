@@ -12,6 +12,8 @@
 - `specs/2026-09-18-m0-cli-route-golden.json` - M0 normalized route fixture.
 - `specs/2026-09-18-m05-host-recovery-design.md` - approved M0.5 durable
   initialization and host recovery design.
+- `specs/2026-09-22-publication-lifecycle-and-test-layering-design.md` -
+  proposed durable publication lifecycle and four-layer test design.
 
 ## Plans
 
