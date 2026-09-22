@@ -515,3 +515,19 @@ legacy route, no direct host durable learner commit, and no bytecode artifacts.
 This plan completes the publication lifecycle and four-layer test architecture
 only after Task 4 fresh-caller and sandbox evidence passes. It does not
 authorize legacy runtime, `ask`, or user-data deletion.
+
+## Implementation Milestone Record
+
+Completed 2026-09-22 on `docs/compatibility-window`:
+
+- Tasks 1-3 implemented the store-owned publication audit lifecycle,
+  publisher-owned host commit, and direct four-layer test-tree migration.
+- Task 4 passed full layered acceptance, package sandbox acceptance, public
+  route/query checks, v1 migration checks, bytecode absence, and negative
+  source-ownership scans.
+- Compatibility classification retains `ask` as release-bound, plans
+  `SessionState` parser extraction separately, and defers `MentorLoop` plus
+  evaluator retirement pending parser and archive evidence.
+
+This is an implementation milestone, not authorization to delete legacy source
+or persistent user data.

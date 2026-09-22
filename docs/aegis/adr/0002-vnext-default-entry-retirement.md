@@ -42,6 +42,11 @@ owners would preserve an ambiguous source of behavior and delay retirement.
    concrete release/version identifier, inspect redacted observation receipts,
    and record one per-surface outcome. This window is documented in
    `docs/aegis/work/2026-09-21-compatibility-window/`.
+7. The 2026-09-22 acceptance decision classifies compatibility surfaces without
+   authorizing deletion: `ask` remains release-bound; `SessionState` remains a
+   read-only importer input until a separately planned parser-extraction slice;
+   and `MentorLoop` plus teaching evaluators remain deferred until that parser
+   slice and archive/disposition evidence are complete.
 
 ## Consequences
 
@@ -52,6 +57,9 @@ owners would preserve an ambiguous source of behavior and delay retirement.
   durable knowledge.
 - The public host protocol uses a vNext-specific state and recovery adapter;
   legacy session state is not read, migrated, or deleted on the public path.
+- Full layered, package-sandbox, public-route, migration, bytecode, and source
+  ownership acceptance passed on 2026-09-22. This establishes the current
+  boundary; it is not a legacy-retirement authorization.
 
 ## Rejected Alternatives
 
@@ -75,6 +83,10 @@ owners would preserve an ambiguous source of behavior and delay retirement.
   their adapter-only tests. The observation period alone is not sufficient:
   release/version evidence and the per-surface decision record are also
   required.
+- Per-surface decision record: retain `ask` until release evidence exists;
+  extract a narrow v1 parser before considering `SessionState` retirement; and
+  defer `MentorLoop` and evaluator disposition until parser and archive
+  evidence are recorded.
 
 ## Verification
 
@@ -84,3 +96,6 @@ owners would preserve an ambiguous source of behavior and delay retirement.
 - M0.5 proves no public default path imports `MentorLoop`.
 - Migration checks must continue to prove that legacy inputs are read-only and
   do not overwrite evolved vNext topics.
+- The 2026-09-22 implementation acceptance passed all four test layers,
+  package sandbox checks, route/query checks, v1 migration checks, bytecode
+  absence, and negative source-ownership scans.

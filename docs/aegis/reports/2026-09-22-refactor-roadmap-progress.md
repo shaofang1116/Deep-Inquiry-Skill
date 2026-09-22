@@ -3,11 +3,12 @@
 ## Snapshot
 
 - Assessment date: 2026-09-22.
-- Assessed branch: `docs/compatibility-window` at `2f6c9e6`.
+- Assessed branch: `docs/compatibility-window` at `ee45e8c` before this
+  acceptance-record commit.
 - Runtime baseline on `main`: `b433904` (`M0.5 vNext host baseline`).
 - Reference roadmap: `Autonomous Mentor 重构路线图`, version 1.0
   (2026-09-18).
-- Overall roadmap completion: **67%**.
+- Overall roadmap completion: **85%**.
 
 The percentage is a weighted implementation assessment, not a count of files
 or passing scripts. It gives greatest weight to the roadmap's two highest-risk
@@ -30,14 +31,14 @@ The public CLI does not import or instantiate `MentorLoop`. Durable knowledge
 is versioned and protected by validation, optimistic conflict rejection, source
 hash checks for v1 import, and a skeptic-before-commit sequence.
 
-The remaining work is principally structural and retirement-oriented:
+The publication lifecycle and test layering are now implemented and accepted.
+The remaining work is retirement-oriented:
 
-1. Make candidate-review-publish lifecycle states explicit rather than
-   representing the successful path only through a direct durable commit.
-2. Extract the v1 import parser from the full teaching-era `SessionState`.
-3. Classify and retire legacy runtime/evaluator assets through separate,
+1. Extract the v1 import parser from the full teaching-era `SessionState`.
+2. Classify and retire legacy runtime/evaluator assets through separate,
    evidence-backed slices.
-4. Reorganize verification into the four test layers named by the roadmap.
+3. Obtain release and observation evidence before making a public `ask`
+   retirement decision.
 
 No current evidence justifies deleting public `ask`; the project has no declared
 release/version boundary or external-consumer inventory. That does not block
@@ -49,11 +50,11 @@ internal compatibility classification or parser extraction.
 | --- | ---: | ---: | ---: |
 | M0: baseline and default-entry decision | 15 | 100% | 15.0 |
 | M1: host adapter and recovery | 20 | 85% | 17.0 |
-| M2: knowledge-quality publication boundary | 25 | 55% | 13.8 |
-| M3: responsibility and compatibility boundary | 20 | 55% | 11.0 |
-| M4: evaluation-asset layering | 10 | 40% | 4.0 |
-| Integration acceptance and freeze | 10 | 65% | 6.5 |
-| **Total** | **100** |  | **67.3%** |
+| M2: knowledge-quality publication boundary | 25 | 90% | 22.5 |
+| M3: responsibility and compatibility boundary | 20 | 60% | 12.0 |
+| M4: evaluation-asset layering | 10 | 90% | 9.0 |
+| Integration acceptance and freeze | 10 | 90% | 9.0 |
+| **Total** | **100** |  | **84.5%** |
 
 The host and default-entry scores measure outcome parity with the roadmap, not
 literal file names. The quality, compatibility, and test-layer scores require
@@ -121,7 +122,7 @@ Gap against the reference design:
 
 ### M2: Knowledge Quality and Publication Boundary
 
-**Status: partially complete (55%).**
+**Status: substantially complete (90%).**
 
 Completed outcomes:
 
@@ -132,27 +133,33 @@ Completed outcomes:
 - The autonomous path includes skeptic review before `commit_learning`.
 - Commit order supports at-most-once durable application through a marker.
 - Convergence is a separate deterministic owner.
+- `KnowledgePublisher` now owns explicit
+  `proposed -> reviewed -> published/rejected -> retired` lifecycle policy.
+- `KnowledgeStore` remains the only durable writer and appends immutable audit
+  records with the published topic projection under its topic lock.
+- Publication checks cover skeptic and malformed-candidate rejection,
+  stale-version rejection, duplicate retries, retirement, and interrupted
+  publication recovery.
 
 Evidence:
 
 - `skill/autonomous-mentor/scripts/knowledge_schema.py`
 - `skill/autonomous-mentor/scripts/knowledge_store.py`
+- `skill/autonomous-mentor/scripts/knowledge_publisher.py`
 - `skill/autonomous-mentor/scripts/autonomous_runtime.py`
 - `skill/autonomous-mentor/examples/tests/core_contract/learning_delta_checks.py`
 - `skill/autonomous-mentor/examples/tests/core_contract/convergence_checks.py`
+- `skill/autonomous-mentor/examples/tests/core_contract/publication_lifecycle_checks.py`
 
-Gap against the reference design:
+Remaining gap against the reference design:
 
-- There is no explicit persisted lifecycle for
-  `proposed -> reviewed -> published/rejected -> retired`.
-- There is no candidate-area store, independent `knowledge_publisher.py`, or
-  rejected-delta reason model.
-- Consequently, the system has a strong commit gate but not the roadmap's
-  separately auditable publication workflow.
+- Candidate projection remains a focused publisher input rather than a
+  separately persisted candidate-area store; current immutable records are
+  sufficient for attempted-update auditability.
 
 ### M3: Responsibility and Compatibility Boundaries
 
-**Status: partially complete (55%).**
+**Status: partially complete (60%).**
 
 Completed outcomes:
 
@@ -163,6 +170,8 @@ Completed outcomes:
 - Re-import cannot overwrite a topic that has evolved under vNext.
 - The new v1 input-surface contract classifies every top-level `SessionState`
   field as `mapped`, `provenance_only`, or `validated_only`.
+- The compatibility window now records per-surface outcomes without authorizing
+  public alias or legacy-source deletion.
 
 Evidence:
 
@@ -189,7 +198,7 @@ Gaps:
 
 ### M4: Evaluation Asset Layering
 
-**Status: started, not structurally complete (40%).**
+**Status: substantially complete (90%).**
 
 Completed outcomes:
 
@@ -198,35 +207,38 @@ Completed outcomes:
   loop behavior, packaging, and cross-model evidence.
 - Each major verification family has a dedicated script instead of relying on
   one monolithic runner.
+- Checks are directly organized under
+  `examples/tests/{core_contract,behavior,migration,adapter}`, and
+  `run_layer.py --all` reports each layer independently.
+- The old root-level internal check paths have no compatibility wrappers.
 
 Gaps:
 
-- The repository has not been reorganized into the roadmap's explicit
-  `core-contract`, `behavior`, `migration`, and `adapter` layers.
-- New tests do not yet declare a layer or a layer-specific deletion condition.
 - No test-duration baseline or intended blast-radius matrix exists.
 - Legacy retirement has not demonstrated that it affects only migration and
   adapter suites.
 
 ### Integration Acceptance and Freeze
 
-**Status: partially complete (65%).**
+**Status: substantially complete (90%).**
 
 Completed outcomes:
 
 - M0.5 has a Git baseline and fresh isolated-worktree verification.
 - The project has verified public routing, stateless query, v1 migration,
-  durable initialization, recovery, at-most-once commit, and package/sandbox
+- durable initialization, recovery, at-most-once commit, and package/sandbox
   paths in prior acceptance runs.
 - No public fallback to `MentorLoop` has been reintroduced.
+- The final implementation acceptance passed all four test layers, package
+  sandbox checks, public route/query checks, v1 migration checks, bytecode
+  absence, and negative source-ownership scans from the isolated worktree.
 
 Remaining conditions for a final roadmap freeze:
 
-- Explicit candidate publication lifecycle and rejection audit trail.
 - Narrow v1 parser extraction or a documented decision to retain the full
   schema with a new trigger.
-- Test-layer boundaries and retirement-specific deletion proof.
-- A completed per-surface compatibility decision.
+- Legacy runtime and evaluator disposition with archive evidence.
+- A release/version-bound public `ask` retirement decision.
 
 ## Current Verification Snapshot
 
@@ -238,6 +250,8 @@ python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
 python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
 python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
 python3 skill/autonomous-mentor/examples/tests/adapter/vnext_host_recovery_checks.py
+python3 skill/autonomous-mentor/examples/tests/run_layer.py --all
+python3 skill/autonomous-mentor/examples/tests/adapter/package_vnext_checks.py
 ```
 
 Results:
@@ -249,18 +263,21 @@ Results:
 | v1 input surface | pass | complete top-level `SessionState` classification |
 | v1 migration | 8/8 pass | one-way mapping, rejection, race, and overwrite guarantees |
 | Host recovery | 12/12 pass | durable initialization and commit-marker recovery |
+| Layered acceptance | 7/7, 9/9, 2/2, 8/8 pass | direct core-contract, behavior, migration, and adapter tree |
+| Package sandbox | 14/14 pass | rebuilt sandbox, explicit root, hash, cache, and package boundaries |
+| Negative boundaries | pass | no bytecode, public legacy owner, or direct runtime learner commit |
 
-These are current point-in-time checks. They do not prove the missing lifecycle,
-parser extraction, or test reorganization because those capabilities do not yet
-exist to test.
+These are current point-in-time checks. They prove the lifecycle and four-layer
+test migration acceptance, but do not prove parser extraction, archive
+disposition, or public alias retirement.
 
 ## Compatibility and Retirement State
 
 | Surface | Current owner/status | Decision state | Required next evidence |
 | --- | --- | --- | --- |
-| `ask` | public `query` alias | defer | declared release/version plus no active dependency evidence |
+| `ask` | public `query` alias | retain, release-bound | declared release/version plus no active dependency evidence |
 | former `state.state` shape | no current public writer | classify | document any actual reader or retire by source proof |
-| `SessionState` for v1 import | read-only importer input | extract candidate | parser parity matrix and narrow DTO plan |
+| `SessionState` for v1 import | read-only importer input | separate extraction slice | parser parity matrix and narrow DTO plan |
 | `MentorLoop` runtime | non-public legacy candidate | defer | importer decoupling and archived evaluator disposition |
 | teaching evaluators | historical evidence candidate | defer | archive/disposition decision |
 
@@ -275,26 +292,18 @@ owner. It prevents only public alias deletion, not internal classification.
 | --- | --- | --- | --- |
 | Parser extraction loses v1 edge cases | import regression | 8 migration cases and input-surface contract | expand parity matrix before changing parser |
 | Broad legacy deletion conflates concerns | runtime/import breakage | retirement plan requires separate slices | extract parser before runtime deletion |
-| Direct durable commit lacks audit lifecycle | insufficient publication traceability | skeptic gate and commit marker | add candidate/review/publish/reject states |
-| Tests remain coupled by convention | high change blast radius | focused scripts | declare and reorganize formal layers |
+| Publication audit recovery regresses | durable trace inconsistency | publisher/store transaction and lifecycle checks | retain fresh sandbox recovery coverage |
+| Tests remain coupled by convention | high change blast radius | direct four-layer runner | add duration and blast-radius baselines |
 | External alias dependency is unknown | CLI breakage | no deletion authorized | bind decision to declared release/version |
 
 ## Recommended Execution Order
 
-1. **Task 3 evidence decision:** record one outcome per retained compatibility
-   surface. This is documentation-only and may proceed immediately.
-2. **M2 publication-lifecycle design:** decide whether an independent
-   `knowledge_publisher` is necessary or whether the current coordinator can
-   own an explicit, persisted lifecycle without becoming a second source of
-   truth. This decision must precede implementation.
-3. **v1 parser extraction slice:** strict TDD parity tests, then introduce a
+1. **v1 parser extraction slice:** strict TDD parity tests, then introduce a
    narrow immutable import record/parser. Do not remove `SessionState` yet.
-4. **Test-layer reorganization:** classify existing checks first; move them
-   only after proving that invocation and coverage remain stable.
-5. **Retirement slices:** only after parser extraction and archival decisions;
+2. **Retirement slices:** only after parser extraction and archival decisions;
    handle `ask` separately when a release/version exists.
-6. **Final integration freeze:** repeat recovery, public route, migration,
-   quality-lifecycle, and sandbox checks from a fresh caller.
+3. **Final integration freeze:** repeat recovery, public route, migration,
+   lifecycle, and sandbox checks from a fresh caller after retirement work.
 
 ## Completion Criteria
 
@@ -302,14 +311,10 @@ The roadmap should be considered complete only when all of the following are
 true:
 
 - A single public learning owner and a single durable writer remain verified.
-- Candidate deltas have explicit review, publication, rejection, and retirement
-  semantics with immutable auditability.
 - v1 import no longer depends on the teaching-era runtime schema, or an ADR
   records why that dependency is intentionally retained.
 - Legacy runtime and evaluator assets have a completed retain/archive/delete
   disposition.
-- Tests have independent core-contract, behavior, migration, and adapter
-  owners with clear deletion conditions.
 - Public alias retirement is tied to an actual release/version decision.
 - A fresh sandbox acceptance verifies all retained contracts without legacy
   fallback.

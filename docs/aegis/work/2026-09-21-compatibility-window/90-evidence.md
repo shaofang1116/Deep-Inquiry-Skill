@@ -124,15 +124,63 @@ Final result: both exit `0`.
 
 ## Retirement Decision
 
-- Path: no retirement decision in this slice.
-- Why: the observation window is open, release evidence is not yet declared,
-  and Task 2 has not measured the minimum v1 importer surface.
-- Non-edits: source, public commands, packages, archives, frozen Skills, and
-  persistent knowledge.
+- `ask`: retain as the public `query` alias. It remains release-bound because
+  no declared release/version identifier or external observation receipt exists.
+- `SessionState`: retain as a read-only v1 importer input until a separately
+  planned narrow parser/DTO extraction has parity evidence.
+- `MentorLoop`: defer retirement until the importer no longer depends on the
+  teaching-era session shape.
+- Teaching evaluators: defer archive or deletion disposition until an archive
+  inventory and retention evidence are complete.
+- No source, public command, package, archive, frozen Skill, or persistent
+  knowledge deletion is authorized by this decision.
+
+## Publication and Test-Layer Acceptance
+
+Commands:
+
+```bash
+python3 skill/autonomous-mentor/examples/tests/run_layer.py --all
+python3 skill/autonomous-mentor/examples/tests/adapter/package_vnext_checks.py
+```
+
+Result: both exited `0` on 2026-09-22.
+
+- Layered acceptance: `core_contract` 7/7, `behavior` 9/9, `migration` 2/2,
+  and `adapter` 8/8.
+- Package sandbox acceptance: 14/14. It used an explicit knowledge root,
+  rebuilt projections, excluded runtime state/caches/absolute user paths, and
+  preserved frozen and user-level Skill hashes.
+
+Fresh public-boundary commands:
+
+```bash
+python3 skill/autonomous-mentor/examples/tests/adapter/cli_route_baseline_checks.py
+python3 skill/autonomous-mentor/examples/tests/adapter/query_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/migration_v1_checks.py
+python3 skill/autonomous-mentor/examples/tests/migration/v1_import_surface_checks.py
+```
+
+Result: all exited `0`; route baseline passed 4/4, stateless query passed 5/5,
+v1 migration passed 8/8, and the v1 input-surface contract passed.
+
+Negative boundary checks:
+
+```bash
+find skill/autonomous-mentor -type d -name __pycache__ -o -type f -name '*.pyc'
+grep -R -nE 'MentorLoop|_run_legacy|_bind_runtime_reference' \
+  skill/autonomous-mentor/scripts/cli.py
+grep -R -n 'apply_knowledge_delta' \
+  skill/autonomous-mentor/scripts/autonomous_runtime.py
+```
+
+Result: no bytecode artifacts and no matches in either public owner scan.
 
 ## Verification Plan for Later Decision
 
-- Main-path check: rerun vNext host and route fixtures.
-- Lingering-reference check: prove public paths do not refer to retired owners.
-- Negative check: prove a retired alias or runtime trigger is absent.
-- Boundary check: preserve explicit v1 import and durable knowledge contracts.
+- Parser extraction: add strict DTO/parser parity checks before changing v1
+  importer ownership.
+- `ask` retirement: obtain a declared release/version identifier and redacted
+  observation receipts before deciding alias removal.
+- `MentorLoop` and evaluator disposition: establish parser decoupling and an
+  archive inventory before any deletion decision.

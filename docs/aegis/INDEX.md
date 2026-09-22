@@ -5,6 +5,8 @@
 - `adr/0001-one-way-v1-import-boundary.md` - one-way v1 import boundary.
 - `adr/0002-vnext-default-entry-retirement.md` - vNext default entry and
   legacy retirement boundary.
+- `adr/0003-publication-audit-journal.md` - immutable publication audit and
+  single-writer boundary.
 
 ## Specifications
 
@@ -28,3 +30,8 @@
 
 - `reports/2026-09-22-refactor-roadmap-progress.md` - roadmap completion,
   evidence, gaps, risks, and recommended execution order.
+
+## Work Records
+
+- `work/2026-09-21-compatibility-window/` - evidence-gated compatibility
+  classification and acceptance receipts.
