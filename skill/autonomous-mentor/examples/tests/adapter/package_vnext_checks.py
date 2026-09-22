@@ -15,7 +15,16 @@ sys.dont_write_bytecode = True
 
 SKILL_ROOT = Path(__file__).resolve().parents[3]
 WORKSPACE_ROOT = SKILL_ROOT.parents[1]
-PROJECT_ROOT = WORKSPACE_ROOT.parents[1]
+GIT_COMMON_DIR = Path(
+    subprocess.run(
+        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        cwd=WORKSPACE_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+)
+PROJECT_ROOT = GIT_COMMON_DIR.parent
 SANDBOX_ROOT = PROJECT_ROOT / ".sandbox" / "autonomous-mentor-vnext"
 SANDBOX_SKILL = SANDBOX_ROOT / "skills" / "autonomous-mentor"
 SANDBOX_WORKSPACE = SANDBOX_ROOT / "workspace"

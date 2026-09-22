@@ -1,5 +1,5 @@
 {
-  "development_tree_sha256": "d60df1079a9e620cd551db7121a238c9614de610b85bc7358754c87a8431076b",
+  "development_tree_sha256": "6f0d619bf1a237250395536bc99e713b91a762b527f06d04163d366c869f9b4c",
   "frozen_skill_sha256": "741c36607cffc03972897aa676604678412a005ece59f039a6ab148d2130bb6f",
   "learning_final_version": 4,
   "learning_topic_id": "eval-vnext-mechanism",
@@ -25,7 +25,7 @@
     "examples/tests/adapter/smoke_run.py",
     "examples/tests/behavior/eval_suite.py"
   ],
-  "sandbox_tree_sha256": "d60df1079a9e620cd551db7121a238c9614de610b85bc7358754c87a8431076b",
+  "sandbox_tree_sha256": "6f0d619bf1a237250395536bc99e713b91a762b527f06d04163d366c869f9b4c",
   "schema_version": 1,
   "user_skill_sha256": "7338788c6daeec83f8e2d6a03bd3c1346a6bea6310ea0884ad718dda32e28b39",
   "validation": "knowledge-first-vnext",
