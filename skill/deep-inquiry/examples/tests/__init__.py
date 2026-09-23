@@ -1,1 +1,0 @@
-"""Layered internal verification assets."""

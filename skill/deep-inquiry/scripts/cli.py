@@ -228,12 +228,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_step = sub.add_parser("step", help="消费 judgment.json 并推进一轮")
     p_step.add_argument(
-        "--message", default="",
-        help="（可选）用户产出，用于迁移练习判分等场景",
+        "--message", default="", help="（可选）用户产出，用于迁移练习判分等场景"
     )
     sub.add_parser("cancel", help="放弃当前进行中的轮次")
     sub.add_parser("state", help="打印当前持久化状态")
-    sub.add_parser("demo", help="运行端到端冒烟（脚本化夹具，无需模型）")
     return parser
 
 
@@ -241,9 +239,7 @@ def main(argv: list[str] | None = None) -> int:
     _force_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args(argv)
-    if args.command != "demo" and (
-        not args.knowledge_root or not args.topic_id
-    ):
+    if not args.knowledge_root or not args.topic_id:
         parser.error(
             "--knowledge-root and --topic-id are required for host commands"
         )
@@ -257,8 +253,6 @@ def main(argv: list[str] | None = None) -> int:
                 args.question,
             )
             return emit_query(result, args, state_dir)
-        if args.command == "demo":
-            return _run_demo()
         return _run_vnext_host(args)
     except (KnowledgeStoreError, QueryError, VNextHostError) as exc:
         _emit_error(exc, args, state_dir)
@@ -304,16 +298,6 @@ def _run_vnext_host(args: argparse.Namespace) -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
     raise VNextHostError(f"unsupported vNext host command {args.command!r}")
-
-
-def _run_demo() -> int:
-    skill_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    examples = os.path.join(skill_root, "examples")
-    sys.path.insert(0, examples)
-    from tests.adapter import smoke_run
-
-    smoke_run.main()
-    return 0
 
 
 def _emit_error(

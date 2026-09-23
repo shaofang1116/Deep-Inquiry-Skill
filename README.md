@@ -37,8 +37,7 @@ deep-inquiry/
 ├── SKILL.md
 ├── SKILL.zh-CN.md
 ├── LICENSE
-├── scripts/
-└── examples/tests/
+└── scripts/
 ```
 
 [`SKILL.md`](skill/deep-inquiry/SKILL.md) is the canonical English protocol. [`SKILL.zh-CN.md`](skill/deep-inquiry/SKILL.zh-CN.md) is its complete Chinese mirror.
@@ -101,21 +100,6 @@ anchor -> map_knowledge -> select_gap -> plan_investigation
 ```
 
 The convergence policy is owned solely by the kernel. A completed checkpoint is not a convergence result and does not create a Markdown report.
-
-## Verify
-
-Run the four owned test layers from the skill directory:
-
-```bash
-cd skill/deep-inquiry
-python3 examples/tests/run_layer.py --all
-```
-
-For an offline, deterministic smoke fixture:
-
-```bash
-python3 scripts/cli.py --json demo
-```
 
 ## License
 

@@ -62,12 +62,6 @@ deep-inquiry/
 │   ├── knowledge_schema.py / knowledge_store.py / renderer.py / query.py
 │   ├── loop.py / convergence.py / learner.py / compressor.py
 │   └── schema.py / store.py / mentor.py   # legacy v1 importer boundary
-└── examples/                # Tier 3 verification assets
-    └── tests/
-        ├── core_contract/
-        ├── behavior/
-        ├── migration/
-        └── adapter/
 ```
 
 The runtime `request.json` self-describes all needed instructions, state snapshots, response templates, and required fields. Do not read `scripts/` source unless diagnosing the kernel.
@@ -104,9 +98,7 @@ When CWD is the Skill directory, `python3 -m scripts.cli ...` is equivalent. On 
 
 3. Run `python3 "$SKILL_DIR/scripts/cli.py" step --json`. A mismatched judgment name, missing field, or illegal enum fails while retaining the scene. Correct `judgment.json` and retry. A next judgment returns pending; repeat step 2. `status: "done"` means the round was persisted, its result is in `trace.result`, and runtime files are cleared.
 
-Use `cancel` to abandon only the active runtime round, `state` to inspect durable state, and `demo` for the deterministic end-to-end smoke fixture. The fixture is offline verification only and must never be copied as a production judgment. For parallel propositions, use `--state <path>/session.json`.
-
-The default vNext evaluation is `python3 examples/tests/behavior/eval_suite.py`. It verifies the convergence owner, at least three autonomous-loop rounds, and stateless query/`ask`. Default traces and results must not contain `assess_user`, `plan_teaching`, `teach_reply`, or `feedback`. Legacy teaching CasePack remains only v1 importer evidence.
+Use `cancel` to abandon only the active runtime round and `state` to inspect durable state. For parallel propositions, use `--state <path>/session.json`.
 
 ### vNext Eight Stages
 
