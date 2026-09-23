@@ -1,9 +1,14 @@
 ---
-name: "autonomous-mentor"
+name: "deep-inquiry"
 description: "Use when the user wants autonomous deep learning, skeptic-reviewed convergence, durable knowledge accumulation, or a stateless query over learned knowledge."
 ---
 
-# 自主学习导师（Autonomous Mentor）
+# 中文镜像
+
+本文件是中文说明镜像。英文 [SKILL.md](SKILL.md) 是 canonical English protocol；
+如两份文件的自然语言说明有歧义，以英文协议以及语言无关的命令、JSON 字段、枚举和错误码为准。
+
+# Deep Inquiry（深度探究）
 
 围绕一个**中心命题**主动学习、主动怀疑、持续收敛并沉淀 durable knowledge 的 Skill。
 学习以高价值认知缺口和边际收益驱动；可选查询只读取已沉淀知识，不模拟用户画像，也不决定学习是否完成。
@@ -57,14 +62,14 @@ Skill 被触发后，必须遵守以下宿主契约：
 本 Skill **不接入、也不内置任何模型 API**：不读取 API key、不发起网络请求、零第三方依赖。
 加载本 Skill 的 agent（你，无论底层是什么模型）本身就是判断者。内核只做确定性的事：
 路由阶段、校验判断的形状与枚举、执行规则、迁移状态、落库。所有认识论判断
-（锚定是否成立、缺口是什么、解释是否经得住怀疑、用户卡在哪、该用哪个教学动作）
+（锚定是否成立、缺口是什么、解释是否经得住怀疑、下一步应调查什么）
 都由你在阅读请求后亲自给出。
 
 因此同一份 Skill 可以被任意模型执行，切换模型不需要改动内核任何一行代码。
 
 ## 安装与前置要求
 
-- **形态**：标准 Agent Skills 目录包，复制整个 `autonomous-mentor/` 到任意兼容工具
+- **形态**：标准 Agent Skills 目录包，复制整个 `deep-inquiry/` 到任意兼容工具
   （Claude Code、各类支持 SKILL.md 的 agent 工具）的 skills 目录即安装完成：
   无需构建、无需 pip/venv、无需可执行位。
 - **运行时**：Python ≥ 3.10（仅标准库；macOS/Linux 用 `python3`，Windows 上可能是 `python`）、
@@ -76,7 +81,7 @@ Skill 被触发后，必须遵守以下宿主契约：
 目录结构（符合 Agent Skills 渐进披露约定）：
 
 ```
-autonomous-mentor/
+deep-inquiry/
 ├── SKILL.md                 # 本文件：触发后加载的执行协议（Tier 2）
 ├── LICENSE                  # MIT
 ├── scripts/                 # 确定性内核：直接「执行」，不要把源码读入上下文
@@ -130,7 +135,7 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 
 第 2 步，阅读 `request.json`，它包含：
 
-- `judgment`：当前判断点名称（共 12 个，见下）
+- `judgment`：当前判断点名称（vNext 默认图有八个阶段；旧会话 importer 另有兼容判断点，见下）
 - `instruction`：这次要你判断什么
 - `state_snapshot`：五类持久化状态的快照（只读）
 - `context`：本轮运行时上下文（如 attempt、user_message、stage_explanation）
@@ -157,7 +162,7 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 **vNext 默认 eval**：`python3 examples/tests/behavior/eval_suite.py` 依次验证 convergence owner、
 至少三轮的 autonomous loop，以及 stateless query/`ask` alias。默认 trace 和结果不得出现
 `assess_user`、`plan_teaching`、`teach_reply` 或 `feedback`。旧教学 CasePack 仅保留为
-Task 10 的 v1 importer 兼容证据，不再由默认 smoke/eval 执行。
+v1 importer 的兼容证据，不再由默认 smoke/eval 执行。
 
 ### vNext 八阶段
 
@@ -188,7 +193,7 @@ Task 10 的 v1 importer 兼容证据，不再由默认 smoke/eval 执行。
 ## 协议铁律（规则，不交给模型自由决定）
 
 - 每轮运行**有且只有一个主推进目标**，其他动作只能服务于它。
-- 任何阶段性解释在压缩前**必须经过简审三问**：最可能错在哪 / 有无更强替代解释 / 现在教会在哪露馅。
+- 任何阶段性解释在压缩前**必须经过简审四问**：最可能错在哪 / 有无更强替代解释 / 现在教会在哪露馅 / 是否遗漏领域内行必答项。
 - 深审只在四种条件触发：解释将进入稳定版本、将作为教学主干、出现反例冲突、多解释竞争。
 - 简审击中结构问题 → 回流重写解释，不允许只做措辞修补。
 - 阶段压缩必须同时给出：当前最稳解释、**至少一个开放边界**、为什么现在可以收敛；缺一不可。

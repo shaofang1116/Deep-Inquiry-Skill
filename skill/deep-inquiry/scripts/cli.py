@@ -32,7 +32,7 @@ sys.dont_write_bytecode = True
 
 # 两种等价启动方式，安装路径无关、当前工作目录无关：
 #   1) python3 -m scripts.cli ...                （CWD 在 skill 目录或包在 PYTHONPATH 中）
-#   2) python3 /<安装路径>/autonomous-mentor/scripts/cli.py ...   （任意 CWD，推荐给 agent）
+#   2) python3 /<安装路径>/deep-inquiry/scripts/cli.py ...   （任意 CWD，推荐给 agent）
 if __package__ in (None, ""):
     _SKILL_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if _SKILL_ROOT not in sys.path:
@@ -189,8 +189,8 @@ def _resolved_knowledge_root(path: str) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="autonomous-mentor",
-        description="自主学习导师 Skill 最小可运行内核（模型无关文件协议）",
+        prog="deep-inquiry",
+        description="Deep Inquiry Skill 最小可运行内核（模型无关文件协议）",
     )
     parser.add_argument(
         "--state", default=DEFAULT_STATE, help=f"状态文件路径（默认 {DEFAULT_STATE}）"

@@ -9,6 +9,8 @@
   single-writer boundary.
 - `adr/0004-converged-markdown-report.md` - deterministic, immutable
   completion report and retry boundary.
+- `adr/0005-deep-inquiry-skill-identity.md` - canonical Deep Inquiry identity,
+  old-entry retirement, and legacy provenance boundary.
 
 ## Specifications
 
@@ -20,6 +22,8 @@
   proposed durable publication lifecycle and four-layer test design.
 - `specs/2026-09-23-converged-markdown-report-brief.md` - approved automatic
   Markdown projection for genuinely converged durable knowledge.
+- `specs/2026-09-23-deep-inquiry-rename-brief.md` - approved canonical Skill
+  identity and rename boundary.
 
 ## Plans
 
@@ -31,11 +35,17 @@
   - implementation plan for durable publication lifecycle and four-layer tests.
 - `plans/2026-09-23-converged-markdown-report-implementation.md` -
   strict-TDD plan for immutable completion-time Markdown reports.
+- `plans/2026-09-23-deep-inquiry-rename-implementation.md` - strict-TDD package,
+  discovery, and release-surface rename.
+- `plans/2026-09-23-deep-inquiry-localization.md` - canonical-English protocol
+  and Simplified Chinese companion localization.
 
 ## Reports
 
 - `reports/2026-09-22-refactor-roadmap-progress.md` - roadmap completion,
   evidence, gaps, risks, and recommended execution order.
+- `reports/2026-09-23-deep-inquiry-rename-validation.md` - final identity,
+  installation, retirement, and package-sandbox evidence.
 
 ## Work Records
 

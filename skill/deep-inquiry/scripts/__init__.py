@@ -1,4 +1,4 @@
-"""Autonomous Mentor package.
+"""Deep Inquiry package.
 
 Runtime owners are imported explicitly so stateless query does not load the
 legacy v1 teaching graph as a package-import side effect.

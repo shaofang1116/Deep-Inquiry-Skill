@@ -328,12 +328,12 @@ def main() -> None:
         print("[4/5] bytecode suppression precedes local package imports")
 
         skill_text = SKILL_MD.read_text(encoding="utf-8")
-        first_action = skill_text.find("首个非 Skill 工具调用")
+        first_action = skill_text.find("first non-Skill tool call")
         init_command = skill_text.find(
             'python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root'
         )
         research_gate = skill_text.find("plan_investigation")
-        research_permission = skill_text.find("研究工具", research_gate)
+        research_permission = skill_text.find("research tool", research_gate)
         assert -1 not in {
             first_action,
             init_command,

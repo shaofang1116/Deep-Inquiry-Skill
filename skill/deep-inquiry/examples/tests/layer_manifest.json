@@ -25,6 +25,8 @@
     "examples/tests/migration/v1_import_surface_checks.py"
   ],
   "adapter": [
+    "examples/tests/adapter/skill_identity_checks.py",
+    "examples/tests/adapter/skill_localization_checks.py",
     "examples/tests/adapter/cli_route_baseline_checks.py",
     "examples/tests/adapter/package_vnext_checks.py",
     "examples/tests/adapter/query_checks.py",

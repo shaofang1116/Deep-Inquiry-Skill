@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run and verify the owned autonomous-mentor executable test layers."""
+"""Run and verify the owned Deep Inquiry executable test layers."""
 
 from __future__ import annotations
 

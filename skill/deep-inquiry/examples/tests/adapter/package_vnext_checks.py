@@ -25,17 +25,14 @@ GIT_COMMON_DIR = Path(
     ).stdout.strip()
 )
 PROJECT_ROOT = GIT_COMMON_DIR.parent
-SANDBOX_ROOT = PROJECT_ROOT / ".sandbox" / "autonomous-mentor-vnext"
-SANDBOX_SKILL = SANDBOX_ROOT / "skills" / "autonomous-mentor"
+SANDBOX_ROOT = PROJECT_ROOT / ".sandbox" / "deep-inquiry-vnext"
+SANDBOX_SKILL = SANDBOX_ROOT / "skills" / "deep-inquiry"
 SANDBOX_WORKSPACE = SANDBOX_ROOT / "workspace"
 SANDBOX_KNOWLEDGE = SANDBOX_ROOT / "knowledge"
-FROZEN_SKILL = PROJECT_ROOT / ".trae" / "skills" / "autonomous-mentor"
-USER_SKILL = Path.home() / ".trae-cn" / "skills" / "autonomous-mentor"
-MANIFEST_PATH = (
-    SKILL_ROOT
-    / "sessions"
-    / "knowledge-first-vnext"
-    / "validation_manifest.json"
+FROZEN_SKILL = PROJECT_ROOT / ".trae" / "skills" / "deep-inquiry"
+USER_SKILL = Path.home() / ".trae-cn" / "skills" / "deep-inquiry"
+VALIDATION_RECORD = (
+    PROJECT_ROOT / ".sandbox" / "deep-inquiry-rename-validation.json"
 )
 CHECKS = (
     "examples/tests/core_contract/knowledge_schema_checks.py",
@@ -46,6 +43,8 @@ CHECKS = (
     "examples/tests/core_contract/markdown_report_checks.py",
     "examples/tests/behavior/autonomous_loop_checks.py",
     "examples/tests/behavior/knowledge_first_acceptance_checks.py",
+    "examples/tests/adapter/skill_identity_checks.py",
+    "examples/tests/adapter/skill_localization_checks.py",
     "examples/tests/adapter/query_checks.py",
     "examples/tests/adapter/work_host_vnext_checks.py",
     "examples/tests/adapter/work_host_contract_checks.py",
@@ -60,11 +59,6 @@ EXCLUDED_PACKAGE_PARTS = {
     "__pycache__",
     ".DS_Store",
 }
-MANIFEST_RELATIVE_PATH = Path(
-    "sessions/knowledge-first-vnext/validation_manifest.json"
-)
-
-
 def _ignore_package_runtime(
     directory: str,
     names: list[str],
@@ -83,7 +77,6 @@ def _tree_hash(root: Path) -> str:
         if (
             EXCLUDED_PACKAGE_PARTS & set(relative.parts)
             or path.name.endswith(".pyc")
-            or relative == MANIFEST_RELATIVE_PATH
         ):
             continue
         digest.update(relative.as_posix().encode("utf-8"))
@@ -226,7 +219,42 @@ def _assert_package_contents() -> None:
     print("[3/5] package excludes runtime state, caches, and absolute user paths")
 
 
-def _write_manifest(
+def _verify_installed_copies() -> tuple[str, str]:
+    development_hash = _tree_hash(SKILL_ROOT)
+    frozen_hash = _tree_hash(FROZEN_SKILL)
+    user_hash = _tree_hash(USER_SKILL)
+    assert frozen_hash == development_hash, (
+        "workspace discovery copy differs from the verified development package"
+    )
+    assert user_hash == development_hash, (
+        "user-level installation differs from the verified development package"
+    )
+    assert not USER_SKILL.is_symlink(), (
+        "user-level installation must be a copied directory, not a symlink"
+    )
+    assert USER_SKILL.resolve() != SKILL_ROOT.resolve(), (
+        "user-level installation must be an independent copy"
+    )
+    retired_user_skill = (
+        Path.home() / ".trae-cn" / "skills" / "autonomous-mentor"
+    )
+    assert not retired_user_skill.exists() and not retired_user_skill.is_symlink(), (
+        "retired user-level Skill installation still exists"
+    )
+    for label, root in (("frozen", FROZEN_SKILL), ("user", USER_SKILL)):
+        result = _run(
+            sys.executable,
+            "examples/tests/adapter/skill_identity_checks.py",
+            cwd=root,
+        )
+        assert result.returncode == 0, (
+            f"{label} installation identity check failed:\n"
+            f"{result.stdout}\n{result.stderr}"
+        )
+    return frozen_hash, user_hash
+
+
+def _write_validation_record(
     frozen_hash: str,
     user_hash: str,
 ) -> None:
@@ -245,32 +273,33 @@ def _write_manifest(
         "zip_generated": False,
         "zip_policy": "requires explicit user approval",
     }
-    MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST_PATH.write_text(
+    VALIDATION_RECORD.parent.mkdir(parents=True, exist_ok=True)
+    temporary = VALIDATION_RECORD.with_suffix(".tmp")
+    temporary.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    os.replace(temporary, VALIDATION_RECORD)
 
 
 def main() -> None:
     assert FROZEN_SKILL.is_dir(), FROZEN_SKILL
     assert USER_SKILL.is_dir(), USER_SKILL
-    frozen_hash = _tree_hash(FROZEN_SKILL)
-    user_hash = _tree_hash(USER_SKILL)
+    frozen_hash, user_hash = _verify_installed_copies()
 
     _rebuild_sandbox()
     _run_sandbox_checks()
     _exercise_sandbox_learning()
     _assert_package_contents()
-    _write_manifest(frozen_hash, user_hash)
 
     _rebuild_sandbox()
     _assert_package_contents()
     assert _tree_hash(FROZEN_SKILL) == frozen_hash
     assert _tree_hash(USER_SKILL) == user_hash
-    assert MANIFEST_PATH.is_file()
-    print("[4/5] frozen and user-level Skill hashes remain unchanged")
-    print("[5/5] validation manifest created; ZIP remains approval-gated")
+    _write_validation_record(frozen_hash, user_hash)
+    assert VALIDATION_RECORD.is_file()
+    print("[4/5] installed copies match the package and remain unchanged")
+    print("[5/5] ephemeral validation record created; ZIP remains approval-gated")
     print("\nTask 12 sandbox recovery and release gate passed.")
 
 
