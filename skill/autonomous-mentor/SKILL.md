@@ -82,7 +82,7 @@ autonomous-mentor/
 ├── scripts/                 # 确定性内核：直接「执行」，不要把源码读入上下文
 │   ├── cli.py               # 唯一命令行入口
 │   ├── judgments.py         # vNext 自主学习阶段与 v1 兼容判断契约
-│   ├── knowledge_schema.py / knowledge_store.py / query.py
+│   ├── knowledge_schema.py / knowledge_store.py / renderer.py / query.py
 │   ├── loop.py / convergence.py / learner.py / compressor.py
 │   └── schema.py / store.py / mentor.py   # v1 importer 兼容边界
 └── examples/                # Tier 3 自检资产：样例、确定性夹具、端到端冒烟
@@ -179,6 +179,9 @@ Task 10 的 v1 importer 兼容证据，不再由默认 smoke/eval 执行。
 
 1. **自主学习**：持续选择最高价值缺口，先公开 investigation plan，再整合证据，
    经 skeptic review 后原子提交一个 delta，最后由 convergence owner 判断继续或完成。
+   真正收敛时，内核把当前已发布知识确定性渲染为
+   `topics/<topic-id>/reports/v<version>.md`，并在完成结果的 `report_path`
+   返回绝对路径。checkpoint 中止不生成报告。
 2. **可选查询**：`query` 读取指定 topic 当前版本，返回 active claims、支撑证据与未决边界；
    不创建 session、不写 knowledge、不推断用户水平。`ask` 仅是完全相同的兼容别名。
 
@@ -262,4 +265,7 @@ Task 10 的 v1 importer 兼容证据，不再由默认 smoke/eval 执行。
 ## 输出口径
 
 对外不展示内部流程表演。学习完成返回 knowledge version、delta history、未决 deferred gaps
-和 convergence reason；查询返回当前版本的知识投影，不伪装成个性化教学。
+和 convergence reason；真正收敛还返回不可变 Markdown 文档的 `report_path`。
+文档只投影 canonical `TopicKnowledge`，不再次调用模型或补写未沉淀内容。文档写入失败时
+不得把 run 标记为 complete，必须保留 completion cursor 供原地重试；查询返回当前版本的
+知识投影，不伪装成个性化教学。

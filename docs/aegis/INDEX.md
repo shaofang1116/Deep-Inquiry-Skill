@@ -7,6 +7,8 @@
   legacy retirement boundary.
 - `adr/0003-publication-audit-journal.md` - immutable publication audit and
   single-writer boundary.
+- `adr/0004-converged-markdown-report.md` - deterministic, immutable
+  completion report and retry boundary.
 
 ## Specifications
 
@@ -16,6 +18,8 @@
   initialization and host recovery design.
 - `specs/2026-09-22-publication-lifecycle-and-test-layering-design.md` -
   proposed durable publication lifecycle and four-layer test design.
+- `specs/2026-09-23-converged-markdown-report-brief.md` - approved automatic
+  Markdown projection for genuinely converged durable knowledge.
 
 ## Plans
 
@@ -25,6 +29,8 @@
   evidence-gated compatibility-window and legacy retirement plan.
 - `plans/2026-09-22-publication-lifecycle-and-test-layering-implementation.md`
   - implementation plan for durable publication lifecycle and four-layer tests.
+- `plans/2026-09-23-converged-markdown-report-implementation.md` -
+  strict-TDD plan for immutable completion-time Markdown reports.
 
 ## Reports
 
@@ -35,3 +41,5 @@
 
 - `work/2026-09-21-compatibility-window/` - evidence-gated compatibility
   classification and acceptance receipts.
+- `work/2026-09-23-converged-markdown-report/` - deterministic completion
+  report implementation checkpoints and verification evidence.

@@ -109,6 +109,54 @@ class KnowledgeStore:
                 f"snapshot missing for topic {topic_id!r} version {version}: {path}"
             ) from exc
 
+    def write_markdown_report(
+        self,
+        topic: TopicKnowledge,
+        payload: bytes,
+    ) -> Path:
+        """Atomically persist one immutable report for the canonical version."""
+        topic.validate()
+        if not isinstance(payload, bytes) or not payload:
+            raise KnowledgeStoreError(
+                "Markdown report payload must be non-empty bytes"
+            )
+        try:
+            payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise KnowledgeStoreError(
+                "Markdown report payload must be valid UTF-8"
+            ) from exc
+        topic_dir = self._topic_dir(topic.topic_id)
+        self._assert_no_symlink_below_root(topic_dir)
+        topic_dir = self._prepare_topic_dir(topic.topic_id)
+        report_path = (
+            topic_dir / "reports" / f"v{topic.version:06d}.md"
+        )
+        try:
+            with self._topic_lock(topic_dir):
+                self._assert_no_symlink_below_root(report_path)
+                current = self._load_unlocked(
+                    topic_dir, recover_current=True
+                )
+                if current.to_dict() != topic.to_dict():
+                    raise IntegrityError(
+                        "Markdown report source is not the canonical topic"
+                    )
+                if report_path.exists():
+                    existing = report_path.read_bytes()
+                    if sha256_bytes(existing) != sha256_bytes(payload):
+                        raise IntegrityError(
+                            "immutable Markdown report already exists with "
+                            f"different SHA-256: {report_path}"
+                        )
+                    return report_path
+                self._atomic_write(report_path, payload, exclusive=True)
+        except KnowledgeStoreError:
+            raise
+        except OSError as exc:
+            raise self._root_error(exc) from exc
+        return report_path
+
     def save(
         self,
         topic: TopicKnowledge,
@@ -434,6 +482,23 @@ class KnowledgeStore:
         ):
             raise KnowledgeStoreError(f"invalid topic ID {topic_id!r}")
         return self.root / "topics" / topic_id
+
+    def _assert_no_symlink_below_root(self, path: Path) -> None:
+        try:
+            relative = path.relative_to(self.root)
+        except ValueError as exc:
+            raise KnowledgeStoreError(
+                f"path escapes configured knowledge root: {path}"
+            ) from exc
+        current = self.root
+        for part in ("", *relative.parts):
+            if part:
+                current /= part
+            if current.is_symlink():
+                raise KnowledgeStoreError(
+                    "configured knowledge path must not contain a symbolic "
+                    f"link: {current}"
+                )
 
     @staticmethod
     def _snapshot_path(topic_dir: Path, version: int) -> Path:

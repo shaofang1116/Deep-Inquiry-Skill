@@ -6,6 +6,7 @@
     "examples/tests/core_contract/learning_delta_checks.py",
     "examples/tests/core_contract/convergence_checks.py",
     "examples/tests/core_contract/publication_lifecycle_checks.py",
+    "examples/tests/core_contract/markdown_report_checks.py",
     "examples/tests/core_contract/tree_quality_checks.py"
   ],
   "behavior": [
@@ -31,6 +32,7 @@
     "examples/tests/adapter/work_host_vnext_checks.py",
     "examples/tests/adapter/vnext_host_recovery_checks.py",
     "examples/tests/adapter/publication_host_recovery_checks.py",
+    "examples/tests/adapter/markdown_report_host_checks.py",
     "examples/tests/adapter/smoke_run.py"
   ]
 }

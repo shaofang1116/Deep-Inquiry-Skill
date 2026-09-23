@@ -15,7 +15,8 @@ from .autonomous_runtime import (
 from .compressor import project_durable_learning_result
 from .convergence import ConvergenceDecision
 from .judgments import JudgmentRequest
-from .knowledge_store import KnowledgeStore
+from .knowledge_store import KnowledgeStore, KnowledgeStoreError
+from .renderer import render_knowledge_report
 from .store import StateStore, StoreError, _atomic_write_json, _read_json
 
 
@@ -176,8 +177,8 @@ class VNextHost:
                     discard_judgment = False
                 next_cursor = self.coordinator.checkpoint_or_continue(cursor)
                 if next_cursor is None:
-                    self._save_run(self._updated_run(run, status="complete"))
                     result = self._result(cursor)
+                    self._save_run(self._updated_run(run, status="complete"))
                     self.runtime.clear_pending()
                     return HostOutcome(status="done", result=result)
                 cursor = next_cursor
@@ -248,4 +249,21 @@ class VNextHost:
     def _result(self, cursor: PendingCursor) -> dict[str, Any]:
         decision = ConvergenceDecision(**cursor.payload["convergence"])
         topic = self.knowledge.load(cursor.topic_id)
-        return project_durable_learning_result(topic, decision)
+        if topic.version != cursor.expected_version:
+            raise VNextHostError(
+                "completion cursor expected_version does not match "
+                "canonical topic version"
+            )
+        result = project_durable_learning_result(topic, decision)
+        if decision.converged:
+            try:
+                report_path = self.knowledge.write_markdown_report(
+                    topic,
+                    render_knowledge_report(topic),
+                )
+            except KnowledgeStoreError as exc:
+                raise VNextHostError(
+                    f"cannot write completion Markdown report: {exc}"
+                ) from exc
+            result["report_path"] = str(report_path)
+        return result
