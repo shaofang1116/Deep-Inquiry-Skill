@@ -20,8 +20,10 @@ from .knowledge_schema import (
     ConvergenceRecord,
     Counterexample,
     Evidence,
+    GainLevel,
     KnowledgeGap,
     LearningDelta,
+    Priority,
     TopicKnowledge,
 )
 from .knowledge_store import KnowledgeStore
@@ -512,6 +514,11 @@ class Learner:
                 payload
             )
 
+        _validate_gain_level(
+            delta,
+            gain_level=update.get("gain_level", ""),
+            gaps=gaps,
+        )
         record = ConvergenceRecord.from_dict(
             {
                 "cycle": update.get("cycle", 0),
@@ -674,3 +681,29 @@ def _validate_disjoint_claim_actions(delta: LearningDelta) -> None:
                     f"claim IDs cannot have multiple delta actions: "
                     f"{sorted(overlap)}"
                 )
+
+
+def _validate_gain_level(
+    delta: LearningDelta,
+    *,
+    gain_level: Any,
+    gaps: dict[str, KnowledgeGap],
+) -> None:
+    """Reject a low-gain label when the same delta records a major change."""
+    if gain_level != GainLevel.LOW.value:
+        return
+    has_high_value_gap = any(
+        gaps[gap_id].priority == Priority.HIGH.value
+        or gaps[gap_id].expected_gain == GainLevel.HIGH.value
+        for gap_id in delta.new_gap_ids
+    )
+    if (
+        delta.revised_claim_ids
+        or delta.retired_claim_ids
+        or delta.counterexample_hits
+        or has_high_value_gap
+    ):
+        raise ValueError(
+            "low-gain delta cannot contain a major revision, retirement, "
+            "counterexample, or high-value gap"
+        )
