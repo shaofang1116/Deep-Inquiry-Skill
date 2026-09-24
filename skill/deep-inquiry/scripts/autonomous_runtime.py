@@ -484,6 +484,12 @@ class HostRuntimeCoordinator:
             return self._next_cursor(cursor, "skeptic_review", payload)
         if cursor.stage == "skeptic_review":
             payload["structural_hit"] = validated["structural_hit"]
+            payload["reader_document_approved"] = validated[
+                "reader_document_approved"
+            ]
+            payload["reader_document_defects"] = validated[
+                "reader_document_defects"
+            ]
             marker = self._commit_marker(payload)
             return self._next_cursor(
                 cursor,
@@ -515,14 +521,24 @@ class HostRuntimeCoordinator:
         integration = dict(cursor.payload["integration"])
         integration["cycle"] = cursor.payload["cycle"]
         integration["skeptic_structural_hit"] = cursor.payload["structural_hit"]
+        document_approved = cursor.payload["reader_document_approved"]
+        document_defects = cursor.payload["reader_document_defects"]
+        approved = not cursor.payload["structural_hit"] and document_approved
+        if cursor.payload["structural_hit"]:
+            reason = "Skeptic structural review rejected the candidate."
+        elif not document_approved:
+            reason = (
+                "Skeptic reader-document review rejected the candidate: "
+                + "; ".join(document_defects)
+            )
+        else:
+            reason = "Skeptic structural and reader-document reviews accepted."
         review = {
-            "approved": not cursor.payload["structural_hit"],
+            "approved": approved,
             "structural_hit": cursor.payload["structural_hit"],
-            "reason": (
-                "Skeptic structural review rejected the candidate."
-                if cursor.payload["structural_hit"]
-                else "Skeptic structural review accepted the candidate."
-            ),
+            "reason": reason,
+            "reader_document_approved": document_approved,
+            "reader_document_defects": document_defects,
         }
         try:
             outcome = self.publisher.publish_or_reject(
@@ -551,6 +567,7 @@ class HostRuntimeCoordinator:
                     "cycle": cursor.payload["cycle"],
                     "selected_gap": cursor.payload["selected_gap"],
                     "plan": cursor.payload["plan"],
+                    "reader_document_defects": list(document_defects),
                 },
             )
         if outcome.state != "published" or outcome.topic is None:

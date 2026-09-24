@@ -113,8 +113,30 @@ Use `cancel` to abandon only the active runtime round and `state` to inspect dur
 
 ## Default vNext Paths
 
-1. **Autonomous learning:** choose the highest-value gap, publish an investigation plan, integrate evidence, conduct skeptic review, atomically commit one delta, then let the convergence owner continue or complete. On true convergence, the kernel deterministically renders published knowledge to `topics/<topic-id>/reports/v<version>.md` and returns its absolute `report_path`. A checkpoint produces no report.
+1. **Autonomous learning:** choose the highest-value gap, publish an investigation plan, integrate evidence, conduct skeptic review, atomically commit one delta, then let the convergence owner continue or complete. `integrate_learning` must return a complete `reader_document`; `skeptic_review` must explicitly approve it or identify reader-document defects before publication. On true convergence, the kernel deterministically renders published knowledge to `topics/<topic-id>/reports/v<version>.md` and returns its absolute `report_path`. A checkpoint produces no report.
 2. **Optional query:** `query` reads the selected topic's current version and returns active claims, supporting evidence, and unresolved boundaries. It creates no session, writes no knowledge, and infers no user level. `ask` is an identical compatibility alias.
+
+### Reader-Document Contract
+
+`reader_document` is the canonical reader-facing knowledge document for a
+schema-v2 topic, not a post-convergence prompt and not a Markdown payload. Its
+plain-text blocks are authored during `integrate_learning`, reviewed during
+`skeptic_review`, and stored atomically with the factual delta. The renderer
+only formats that stored content.
+
+The document must explain a mechanism chain, conditions, cross-dimension
+synthesis, application guidance, and boundaries or uncertainty. It must cover
+every declared dimension and ground each substantive block in active or
+disputed claims plus the evidence it references. A list of atomic claims is
+not an adequate substitute for connected explanatory prose.
+
+Use the language-independent fields exactly as specified:
+`schema_version`, `overview`, `sections`, `synthesis`,
+`application_guidance`, `boundary_notes`, `claim_ids`, `evidence_ids`,
+`gap_ids`, and `dimension_refs`. Section text is reader-facing; it must not
+narrate investigation plans, gates, cursor state, cycle history, or host
+workflow. The stable claim kinds include `mechanism`, `conditions`,
+`boundary`, and `synthesis`.
 
 ## Protocol Invariants
 
@@ -128,6 +150,11 @@ Use `cancel` to abandon only the active runtime round and `state` to inspect dur
 - **Question-tree quality.** One node asks one independently answerable question. Two question marks or interrogatives are compound and rejected. Depth is at most two: children use `parent_id`, retain the parent's `dimension`, and deepen inside it. Reject third-level nodes, cross-dimension attachment, and unknown parents. Capacities: at most 7 roots, 3 children per root, and 15 total. Root questions are neutral, not prewritten answer forms. `learn_round.new_sub_questions` follows the same rules; pruning removes a parent with its children.
 - **Auditable dimension derivation.** Every `coverage_dimensions` entry has exactly one `dimension_sources` record. A `phase` source must preserve a `scope_qualifiers` `source_qualifier`; a `cross_cutting` source needs `reason` and root `depends_on` all relevant phases; a `standalone` source needs a reason. At least one phase is required; new anchors cannot create `legacy`. Old sessions migrate missing provenance as `legacy` only to remain loadable.
 - **Evidence provenance and no false precision.** A unit-bearing numeric value in `dimension_rules` needs either `basis` at standard/clause level or `heuristic: true`; otherwise reject it. A heuristic still counts for depth but public rendering must state it is a heuristic requiring local planning/current-standard confirmation. Logical rules without numbers need no provenance. Evidence may persist `citation`.
+- **Reader-document review is part of skeptical acceptance.** `skeptic_review`
+  must reject a document that is shallow, ungrounded, missing a coverage
+  dimension, or narrates the workflow. A schema-v2 publication requires a
+  complete approved `reader_document`; schema-v1 remains readable only as a
+  compatibility state and cannot produce a new converged report.
 - Queries never write user profile, teaching action, feedback state, or durable knowledge.
 - Remove the `ask` alias before the first subsequent major version; do not extend it without external-dependency evidence.
 - Expansion must connect back to the central proposition and state how the round changed its understanding.
@@ -153,4 +180,15 @@ Follow `scripts/failures.py` when these conditions occur: proposition drift rean
 
 ## External Output
 
-Do not expose internal process theater. A completed learning run returns knowledge version, delta history, deferred gaps, and convergence reason. True convergence also returns immutable Markdown `report_path`. The report only projects canonical `TopicKnowledge`, never calls a model again, and never invents unstored content. A report-write failure must not mark the run complete; retain the completion cursor for in-place retry. A query returns the current knowledge projection and does not pretend to be personalized teaching.
+Do not expose internal process theater. A completed learning run returns
+knowledge version, delta history, deferred gaps, and convergence reason. True
+convergence also returns immutable Markdown `report_path`. Its schema-v2
+report is a reader-facing knowledge document with overview, explanatory
+sections, cross-dimension synthesis, application, boundaries, and compact
+sources. It is deterministic, only projects canonical `TopicKnowledge`, never
+calls a model again, and never invents unstored content. It contains no claim,
+evidence, gap, or convergence-history registry; audit state remains durable
+but is not the report's primary narrative. A report-write failure must not mark
+the run complete; retain the completion cursor for in-place retry. A query
+returns the current knowledge projection and does not pretend to be
+personalized teaching.

@@ -7,6 +7,12 @@ from enum import Enum
 import json
 from typing import Any, Iterable
 
+from .reader_document import (
+    ReaderDocumentError,
+    reader_document_from_dict,
+    reader_document_to_dict,
+)
+
 
 class KnowledgeSchemaError(ValueError):
     """A durable knowledge object violates its data contract."""
@@ -571,6 +577,7 @@ class PublicationRecord:
             self.review = _json_object(
                 self.review, "publication_record.review"
             )
+            self._validate_reader_document_review()
         if self.rejection is not None:
             self.rejection = _json_object(
                 self.rejection, "publication_record.rejection"
@@ -621,6 +628,46 @@ class PublicationRecord:
                 raise KnowledgeSchemaError(
                     "retired record requires published_version"
                 )
+
+    def _validate_reader_document_review(self) -> None:
+        assert self.review is not None
+        fields = {
+            "reader_document_approved",
+            "reader_document_defects",
+        }
+        present = fields & set(self.review)
+        if not present:
+            return
+        if present != fields:
+            raise KnowledgeSchemaError(
+                "publication_record.review reader document fields must be paired"
+            )
+        approved = self.review["reader_document_approved"]
+        defects = self.review["reader_document_defects"]
+        if not isinstance(approved, bool):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_approved must be boolean"
+            )
+        if not isinstance(defects, list):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_defects must be a list"
+            )
+        if any(
+            not isinstance(defect, str) or not defect.strip()
+            for defect in defects
+        ):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_defects must contain "
+                "non-empty strings"
+            )
+        if approved and defects:
+            raise KnowledgeSchemaError(
+                "approved reader document review cannot contain defects"
+            )
+        if not approved and not defects:
+            raise KnowledgeSchemaError(
+                "rejected reader document review must contain defects"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -677,6 +724,7 @@ class TopicKnowledge:
     updated_at: str
     migration_metadata: dict[str, Any] = field(default_factory=dict)
     origin_metadata: dict[str, Any] | None = None
+    reader_document: dict[str, Any] | None = None
 
     def validate(self) -> None:
         self.schema_version = _int_at_least(
@@ -813,6 +861,18 @@ class TopicKnowledge:
             self._validate_delta_references(
                 delta, claim_ids, evidence_ids, gap_ids, counterexample_ids
             )
+        if self.reader_document is not None and self.schema_version < 2:
+            raise KnowledgeSchemaError(
+                "topic.reader_document requires schema_version 2 or later"
+            )
+        try:
+            self.reader_document = reader_document_from_dict(
+                self.reader_document,
+                topic=self,
+                require_complete=False,
+            )
+        except ReaderDocumentError as exc:
+            raise KnowledgeSchemaError(str(exc)) from exc
 
     @staticmethod
     def _validate_delta_references(
@@ -862,6 +922,10 @@ class TopicKnowledge:
         }
         if self.origin_metadata is not None:
             payload["origin_metadata"] = dict(self.origin_metadata)
+        if self.reader_document is not None:
+            payload["reader_document"] = reader_document_to_dict(
+                self.reader_document
+            )
         return payload
 
     @classmethod
@@ -892,6 +956,7 @@ class TopicKnowledge:
             updated_at=data.get("updated_at", ""),
             migration_metadata=data.get("migration_metadata", {}),
             origin_metadata=data.get("origin_metadata"),
+            reader_document=data.get("reader_document"),
         )
         topic.validate()
         return topic

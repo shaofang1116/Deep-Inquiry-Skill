@@ -172,11 +172,30 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 
 1. **自主学习**：持续选择最高价值缺口，先公开 investigation plan，再整合证据，
    经 skeptic review 后原子提交一个 delta，最后由 convergence owner 判断继续或完成。
+   `integrate_learning` 必须返回完整 `reader_document`；`skeptic_review` 必须在发布前
+   明确批准它或列出 reader-document 缺陷。
    真正收敛时，内核把当前已发布知识确定性渲染为
    `topics/<topic-id>/reports/v<version>.md`，并在完成结果的 `report_path`
    返回绝对路径。checkpoint 中止不生成报告。
 2. **可选查询**：`query` 读取指定 topic 当前版本，返回 active claims、支撑证据与未决边界；
    不创建 session、不写 knowledge、不推断用户水平。`ask` 仅是完全相同的兼容别名。
+
+### 读者文档契约
+
+`reader_document` 是 schema-v2 topic 的 canonical reader-facing knowledge
+document，不是收敛后的额外提示词，也不是 Markdown 载荷。其纯文本区块在
+`integrate_learning` 中撰写，在 `skeptic_review` 中审查，并与事实 delta 原子持久化；
+renderer 只格式化这份已存内容。
+
+文档必须解释机制链、条件、跨维度综合、应用方法以及边界或不确定性。它必须覆盖每个已声明
+维度，并以 active 或 disputed claims 及其引用的证据支撑每一个实质区块。原子主张的列表
+不能替代连贯的解释性正文。
+
+下列语言无关字段必须严格按约定使用：`schema_version`、`overview`、`sections`、
+`synthesis`、`application_guidance`、`boundary_notes`、`claim_ids`、`evidence_ids`、
+`gap_ids` 与 `dimension_refs`。section 正文面向读者，禁止叙述 investigation plan、gate、
+cursor 状态、cycle history 或宿主工作流。稳定 claim kind 包括 `mechanism`、`conditions`、
+`boundary` 与 `synthesis`。
 
 ## 协议铁律（规则，不交给模型自由决定）
 
@@ -219,6 +238,9 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
   heuristic 规则仍计入最低深度，但对外展示（压缩解释/教学）必须经 `render_rule` 附带
   「经验启发式，须以当地规划/现行规范为准」，不得写成确定规则；逻辑推导型无数值规则无需溯源。
   证据条目支持 `citation`（规范编号级出处），随证据簿持久化。
+- **读者文档审查属于怀疑者准入的一部分。** `skeptic_review` 必须拒绝粗浅、无证据支撑、
+  漏掉 coverage dimension 或叙述工作流的文档。schema-v2 的发布必须带完整且已批准的
+  `reader_document`；schema-v1 只为兼容读取保留，不能生成新的收敛报告。
 - 查询不得写入用户画像、教学动作、反馈状态或任何 durable knowledge 字段。
 - `ask` 兼容别名在首个后续 major version 前删除；若无外部依赖证据，不得延长。
 - 扩张必须回连中心命题，回答「这轮如何改变了我对命题的理解」；答不出即低价值扩张。
@@ -259,6 +281,8 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 
 对外不展示内部流程表演。学习完成返回 knowledge version、delta history、未决 deferred gaps
 和 convergence reason；真正收敛还返回不可变 Markdown 文档的 `report_path`。
-文档只投影 canonical `TopicKnowledge`，不再次调用模型或补写未沉淀内容。文档写入失败时
-不得把 run 标记为 complete，必须保留 completion cursor 供原地重试；查询返回当前版本的
-知识投影，不伪装成个性化教学。
+schema-v2 文档是 reader-facing knowledge document，按概览、解释性章节、跨维度综合、应用、
+边界与紧凑来源组织。它是确定性的，只投影 canonical `TopicKnowledge`，不再次调用模型或补写
+未沉淀内容；其中没有 claim、evidence、gap 或 convergence-history registry，审计状态仍可持久化，
+但不是报告的主要叙事。文档写入失败时不得把 run 标记为 complete，必须保留 completion cursor
+供原地重试；查询返回当前版本的知识投影，不伪装成个性化教学。

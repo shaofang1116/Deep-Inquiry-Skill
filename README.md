@@ -9,9 +9,16 @@ The deterministic Python kernel owns protocol validation, state transitions, per
 - Versioned topic knowledge under `<knowledge-root>/topics/<topic-id>/`
 - An auditable history of learning deltas and unresolved boundaries
 - A stateless `query` interface over the current durable topic
-- An immutable Markdown report at `topics/<topic-id>/reports/v<version>.md` when a topic genuinely converges
+- An immutable, reader-oriented knowledge document at
+  `topics/<topic-id>/reports/v<version>.md` when a topic genuinely converges
 
 Queries do not modify stored knowledge or infer a user profile.
+
+The converged report is not an audit export. It deterministically formats the
+skeptic-reviewed reader document stored with canonical topic knowledge: an
+overview, explanatory sections, cross-dimension synthesis, application
+guidance, boundaries, and compact source notes. Audit history remains durable
+for inspection but is not presented as the report's primary narrative.
 
 ## Requirements
 

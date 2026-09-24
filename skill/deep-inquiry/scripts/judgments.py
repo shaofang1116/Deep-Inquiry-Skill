@@ -84,7 +84,11 @@ _AUTONOMOUS_AGENT_SPECS = {
         ["plan"],
     ),
     INTEGRATE_LEARNING: (
-        "Propose one validated knowledge delta without persisting it.",
+        "Propose one validated knowledge delta and a complete reader_document "
+        "without persisting either. The document must explain mechanisms, "
+        "conditions, cross-dimension relationships, application guidance, and "
+        "boundaries or uncertainty. Do not narrate workflow, gates, plans, or "
+        "cycle history.",
         [
             "delta",
             "claims",
@@ -93,11 +97,19 @@ _AUTONOMOUS_AGENT_SPECS = {
             "counterexamples",
             "phase",
             "gain_level",
+            "reader_document",
         ],
     ),
     SKEPTIC_REVIEW: (
-        "Review the proposed integration for unresolved structural defects.",
-        ["structural_hit"],
+        "Review the proposed integration, including its complete "
+        "reader_document, for unresolved structural defects, unsupported "
+        "synthesis, missing coverage, misleading certainty, and workflow "
+        "narration.",
+        [
+            "structural_hit",
+            "reader_document_approved",
+            "reader_document_defects",
+        ],
     ),
     ASSESS_CONVERGENCE: (
         "Assess marginal gain and remaining work against durable topic state.",
@@ -121,6 +133,45 @@ _INITIALIZE_TOPIC_FIELDS = (
     "gaps",
     "counterexamples",
 )
+
+_READER_DOCUMENT_TEMPLATE = {
+    "schema_version": 1,
+    "overview": {
+        "paragraphs": ["reader-facing orientation"],
+        "claim_ids": ["active-or-disputed-claim-id"],
+        "evidence_ids": [],
+    },
+    "sections": [
+        {
+            "id": "stable-section-id",
+            "heading": "reader-facing heading",
+            "paragraphs": ["connected explanatory paragraph"],
+            "key_points": [],
+            "dimension_refs": ["coverage dimension"],
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
+        }
+    ],
+    "synthesis": {
+        "paragraphs": ["cross-dimension explanation"],
+        "claim_ids": ["active-or-disputed-claim-id"],
+        "evidence_ids": [],
+    },
+    "application_guidance": [
+        {
+            "text": "practical action or decision rule",
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
+        }
+    ],
+    "boundary_notes": [
+        {
+            "text": "limitation, exception, or uncertainty",
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "gap_ids": [],
+        }
+    ],
+}
 
 GAP_TYPES = [g.value for g in GapType]
 DIALOG_GOALS = [g.value for g in DialogGoal]
@@ -740,12 +791,27 @@ def build_autonomous_request(
         raise JudgmentError(f"unknown autonomous agent stage: {stage}")
     instruction, required = _AUTONOMOUS_AGENT_SPECS[stage]
     snapshot = topic.to_dict() if hasattr(topic, "to_dict") else dict(topic)
+    if stage == INTEGRATE_LEARNING:
+        snapshot.setdefault("reader_document", None)
+    template = {field_name: None for field_name in required}
+    if stage == INTEGRATE_LEARNING:
+        template["reader_document"] = _READER_DOCUMENT_TEMPLATE
+    elif stage == SKEPTIC_REVIEW:
+        template.update(
+            {
+                "structural_hit": False,
+                "reader_document_approved": False,
+                "reader_document_defects": [
+                    "reader-facing defect requiring revision"
+                ],
+            }
+        )
     return JudgmentRequest(
         name=stage,
         instruction=instruction,
         state_snapshot=snapshot,
         context=dict(context or {}),
-        response_template={field_name: None for field_name in required},
+        response_template=template,
         required_fields=list(required),
     )
 
@@ -769,6 +835,30 @@ def validate_autonomous_response(
         if value is None or (isinstance(value, str) and not value.strip()):
             raise JudgmentError(
                 f"autonomous stage response field cannot be empty: {field_name}"
+            )
+    if stage == SKEPTIC_REVIEW:
+        if not isinstance(response["structural_hit"], bool):
+            raise JudgmentError(
+                "skeptic_review structural_hit must be a boolean"
+            )
+        if not isinstance(response["reader_document_approved"], bool):
+            raise JudgmentError(
+                "skeptic_review reader_document_approved must be a boolean"
+            )
+        defects = response["reader_document_defects"]
+        if not isinstance(defects, list) or not all(
+            isinstance(defect, str) and defect.strip() for defect in defects
+        ):
+            raise JudgmentError(
+                "skeptic_review reader_document_defects must be a string list"
+            )
+        if response["reader_document_approved"] and defects:
+            raise JudgmentError(
+                "skeptic_review approved reader_document must have no defects"
+            )
+        if not response["reader_document_approved"] and not defects:
+            raise JudgmentError(
+                "skeptic_review rejected reader_document must list defects"
             )
     return response
 

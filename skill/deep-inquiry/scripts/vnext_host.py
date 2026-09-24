@@ -16,6 +16,7 @@ from .compressor import project_durable_learning_result
 from .convergence import ConvergenceDecision
 from .judgments import JudgmentRequest
 from .knowledge_store import KnowledgeStore, KnowledgeStoreError
+from .reader_document import reader_document_ready
 from .renderer import render_knowledge_report
 from .store import StateStore, StoreError, _atomic_write_json, _read_json
 
@@ -256,12 +257,17 @@ class VNextHost:
             )
         result = project_durable_learning_result(topic, decision)
         if decision.converged:
+            if topic.schema_version != 2 or not reader_document_ready(topic):
+                raise VNextHostError(
+                    "cannot complete a converged report without a ready "
+                    "schema-v2 reader document"
+                )
             try:
                 report_path = self.knowledge.write_markdown_report(
                     topic,
                     render_knowledge_report(topic),
                 )
-            except KnowledgeStoreError as exc:
+            except (KnowledgeStoreError, ValueError) as exc:
                 raise VNextHostError(
                     f"cannot write completion Markdown report: {exc}"
                 ) from exc

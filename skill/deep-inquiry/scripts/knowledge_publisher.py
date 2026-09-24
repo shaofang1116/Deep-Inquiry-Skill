@@ -60,7 +60,7 @@ class KnowledgePublisher:
         )
 
         try:
-            approved, structural_hit, reason = self._review_decision(review)
+            reviewed_decision = self._review_decision(review)
         except ValueError as exc:
             return self._reject(
                 current=current,
@@ -69,6 +69,9 @@ class KnowledgePublisher:
                 code="invalid_review",
                 reason=str(exc),
             )
+        approved = reviewed_decision["approved"]
+        structural_hit = reviewed_decision["structural_hit"]
+        reason = reviewed_decision["reason"]
 
         reviewed = self._record(
             topic_id=topic_id,
@@ -77,7 +80,7 @@ class KnowledgePublisher:
             base_version=base_version,
             delta=proposed.delta,
             integration=proposed.integration,
-            review={"approved": approved, "structural_hit": structural_hit, "reason": reason},
+            review=reviewed_decision,
         )
         if not approved or structural_hit:
             return self._reject(
@@ -86,6 +89,17 @@ class KnowledgePublisher:
                 review=reviewed,
                 code="skeptic_structural_hit",
                 reason=reason,
+            )
+        if (
+            not reviewed_decision["reader_document_approved"]
+            or reviewed_decision["reader_document_defects"]
+        ):
+            return self._reject(
+                current=current,
+                proposed=proposed,
+                review=reviewed,
+                code="reader_document_review_rejected",
+                reason="Reader document review must be approved without defects.",
             )
 
         try:
@@ -163,7 +177,9 @@ class KnowledgePublisher:
         }
         try:
             next_topic = self._learner.build_knowledge_candidate(
-                current, update=candidate
+                current,
+                update=candidate,
+                allow_missing_reader_document=True,
             )
         except (TypeError, ValueError) as exc:
             raise ValueError(f"invalid retirement candidate: {exc}") from exc
@@ -256,7 +272,7 @@ class KnowledgePublisher:
         }
 
     @staticmethod
-    def _review_decision(review: dict[str, object]) -> tuple[bool, bool, str]:
+    def _review_decision(review: dict[str, object]) -> dict[str, object]:
         approved = review.get("approved")
         structural_hit = review.get("structural_hit")
         reason = review.get("reason")
@@ -264,7 +280,41 @@ class KnowledgePublisher:
             raise ValueError("review approval and structural_hit must be boolean")
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("review reason must be a non-empty string")
-        return approved, structural_hit, reason
+        decision = {
+            "approved": approved,
+            "structural_hit": structural_hit,
+            "reason": reason,
+        }
+        document_fields = {
+            "reader_document_approved",
+            "reader_document_defects",
+        }
+        present = document_fields & set(review)
+        if present != document_fields:
+            raise ValueError(
+                "reader document review requires approval and defects"
+            )
+        document_approved = review["reader_document_approved"]
+        document_defects = review["reader_document_defects"]
+        if not isinstance(document_approved, bool):
+            raise ValueError("reader_document_approved must be boolean")
+        if (
+            not isinstance(document_defects, list)
+            or any(
+                not isinstance(defect, str) or not defect.strip()
+                for defect in document_defects
+            )
+        ):
+            raise ValueError(
+                "reader_document_defects must be a list of non-empty strings"
+            )
+        if document_approved and document_defects:
+            raise ValueError("approved reader document cannot have defects")
+        if not document_approved and not document_defects:
+            raise ValueError("rejected reader document must list defects")
+        decision["reader_document_approved"] = document_approved
+        decision["reader_document_defects"] = list(document_defects)
+        return decision
 
     @staticmethod
     def _safe_reason(reason: str) -> str:

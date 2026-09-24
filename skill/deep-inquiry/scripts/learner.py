@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import failures
 from .knowledge_schema import (
@@ -26,7 +26,7 @@ from .knowledge_schema import (
     Priority,
     TopicKnowledge,
 )
-from .knowledge_store import KnowledgeStore
+from .reader_document import ReaderDocumentError, reader_document_from_dict
 from .schema import (
     DIM_SOURCE_ANCHOR_KINDS,
     DIM_SOURCE_CROSS_CUTTING,
@@ -39,6 +39,9 @@ from .schema import (
     SubQuestion,
     TriggerSource,
 )
+
+if TYPE_CHECKING:
+    from .knowledge_store import KnowledgeStore
 
 # 疑问词按长在前匹配，避免「为什么」被拆成两个词
 _QUESTION_STEMS = (
@@ -412,8 +415,14 @@ class Learner:
         current: TopicKnowledge,
         *,
         update: dict[str, Any],
+        allow_missing_reader_document: bool = False,
+        schema_version: int = 2,
     ) -> TopicKnowledge:
-        """Construct one validated next projection without durable I/O."""
+        """Construct one validated next projection without durable I/O.
+
+        Accepted learning publications require complete reader prose. Direct
+        lifecycle retirement is the sole caller allowed to invalidate it.
+        """
         next_version = current.version + 1
         delta = LearningDelta.from_dict(update.get("delta", {}))
         _validate_disjoint_claim_actions(delta)
@@ -533,6 +542,7 @@ class Learner:
         candidate_payload = current.to_dict()
         candidate_payload.update(
             {
+                "schema_version": schema_version,
                 "version": next_version,
                 "claims": [item.to_dict() for item in claims.values()],
                 "evidence": [item.to_dict() for item in evidence.values()],
@@ -549,6 +559,16 @@ class Learner:
                 ),
             }
         )
+        candidate_payload.pop("reader_document", None)
+        candidate_graph = TopicKnowledge.from_dict(candidate_payload)
+        try:
+            candidate_payload["reader_document"] = reader_document_from_dict(
+                update.get("reader_document"),
+                topic=candidate_graph,
+                require_complete=not allow_missing_reader_document,
+            )
+        except ReaderDocumentError as exc:
+            raise ValueError(f"invalid reader_document: {exc}") from exc
         candidate = TopicKnowledge.from_dict(candidate_payload)
         return candidate
 
@@ -560,14 +580,11 @@ class Learner:
         base_version: int,
         update: dict[str, Any],
     ) -> TopicKnowledge:
-        """Validate and atomically apply one auditable durable delta."""
-        current = store.load(topic_id)
-        if current.topic_id != topic_id:
-            raise ValueError(
-                f"loaded topic {current.topic_id!r} does not match {topic_id!r}"
-            )
-        candidate = self.build_knowledge_candidate(current, update=update)
-        return store.save(candidate, base_version=base_version)
+        """Reject retired direct publication so Publisher owns every lifecycle."""
+        del store, topic_id, base_version, update
+        raise ValueError(
+            "durable learning publication requires KnowledgePublisher"
+        )
 
     @staticmethod
     def _merge_dimension_rules(state: Any, raw_rules: list[dict[str, Any]]) -> None:

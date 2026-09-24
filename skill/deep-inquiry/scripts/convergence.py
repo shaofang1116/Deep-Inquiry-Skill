@@ -16,6 +16,7 @@ from .knowledge_schema import (
     Priority,
     TopicKnowledge,
 )
+from .reader_document import reader_document_ready
 
 
 REQUIRED_FACETS = {
@@ -110,6 +111,12 @@ def evaluate_convergence(
                 "knowledge cycles without satisfying convergence."
             ),
             checkpoint_required=True,
+        )
+
+    if not reader_document_ready(topic):
+        return _blocked(
+            "reader_document_not_ready",
+            "Knowledge requires a complete reader document before convergence.",
         )
 
     missing_facets = _missing_facets(topic)

@@ -58,6 +58,56 @@ def _topic() -> TopicKnowledge:
     )
 
 
+def _reader_document() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "overview": {
+            "paragraphs": ["The initial claim frames the operating decision."],
+            "claim_ids": ["claim-1"],
+            "evidence_ids": [],
+        },
+        "sections": [
+            {
+                "id": "scope",
+                "heading": "Scope",
+                "paragraphs": ["Scope determines the decision envelope."],
+                "key_points": [],
+                "dimension_refs": ["scope"],
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            },
+            {
+                "id": "risk",
+                "heading": "Risk",
+                "paragraphs": ["Risk must be assessed within that envelope."],
+                "key_points": [],
+                "dimension_refs": ["risk"],
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            },
+        ],
+        "synthesis": {
+            "paragraphs": ["Scope and risk must be evaluated together."],
+            "claim_ids": ["claim-1"],
+            "evidence_ids": [],
+        },
+        "application_guidance": [
+            {
+                "text": "Check scope before accepting risk.",
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            }
+        ],
+        "boundary_notes": [
+            {
+                "text": "The initial evidence remains limited.",
+                "claim_ids": ["claim-1"],
+                "gap_ids": [],
+            }
+        ],
+    }
+
+
 def _update(delta: dict[str, list[str]], **overrides: object) -> dict[str, object]:
     return {
         "delta": {
@@ -78,6 +128,7 @@ def _update(delta: dict[str, list[str]], **overrides: object) -> dict[str, objec
         "phase": "post_baseline",
         "gain_level": "low",
         "skeptic_structural_hit": False,
+        "reader_document": _reader_document(),
         **overrides,
     }
 
@@ -127,6 +178,38 @@ class LowGainMajorDeltaTests(unittest.TestCase):
         self.assertEqual(candidate.version, 2)
         self.assertEqual(candidate.convergence_history[-1].gain_level, "low")
 
+    def test_apply_knowledge_delta_rejects_reader_document_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = KnowledgeStore(directory)
+            store.create(_topic())
+
+            with self.assertRaisesRegex(ValueError, "KnowledgePublisher"):
+                Learner().apply_knowledge_delta(
+                    store,
+                    "gain-validation",
+                    base_version=1,
+                    update=_update({}),
+                )
+
+            self.assertEqual(store.load("gain-validation").version, 1)
+
+    def test_apply_knowledge_delta_rejects_legacy_v1_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = KnowledgeStore(directory)
+            store.create(_topic())
+            update = _update({})
+            update.pop("reader_document")
+
+            with self.assertRaisesRegex(ValueError, "KnowledgePublisher"):
+                Learner().apply_knowledge_delta(
+                    store,
+                    "gain-validation",
+                    base_version=1,
+                    update=update,
+                )
+
+            self.assertEqual(store.load("gain-validation").version, 1)
+
     def test_publisher_rejects_before_advancing_canonical_version(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = KnowledgeStore(directory)
@@ -139,6 +222,8 @@ class LowGainMajorDeltaTests(unittest.TestCase):
                     "approved": True,
                     "structural_hit": False,
                     "reason": "The candidate passed skeptical review.",
+                    "reader_document_approved": True,
+                    "reader_document_defects": [],
                 },
                 candidate_id="invalid-low-gain-retirement",
             )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from .knowledge_schema import TopicKnowledge
+from .reader_document import reader_document_ready
 
 
 def _inline(value: str) -> str:
@@ -31,9 +32,130 @@ def _refs(values: list[str]) -> str:
     return ", ".join(_code(value) for value in values) or "None"
 
 
-def render_knowledge_report(topic: TopicKnowledge) -> bytes:
-    """Render a complete, deterministic report from published knowledge."""
-    topic.validate()
+def _paragraphs(
+    values: list[object],
+    source_numbers: dict[str, int],
+    evidence_ids: list[object],
+) -> list[str]:
+    """Render reader paragraphs with compact source notes."""
+    source_notes = _source_notes(evidence_ids, source_numbers)
+    return [
+        f"{_inline(value)}{source_notes}"
+        for value in values
+        if isinstance(value, str)
+    ]
+
+
+def _source_notes(
+    evidence_ids: list[object],
+    source_numbers: dict[str, int],
+) -> str:
+    numbers = [
+        source_numbers[evidence_id]
+        for evidence_id in evidence_ids
+        if isinstance(evidence_id, str) and evidence_id in source_numbers
+    ]
+    return f" [{', '.join(str(number) for number in numbers)}]" if numbers else ""
+
+
+def _reader_evidence_ids(document: dict[str, object]) -> list[str]:
+    """Collect reader-document evidence IDs in displayed order."""
+    blocks: list[object] = [
+        document["overview"],
+        *document["sections"],
+        document["synthesis"],
+        *document["application_guidance"],
+        *document["boundary_notes"],
+    ]
+    evidence_ids: list[str] = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        for evidence_id in block.get("evidence_ids", []):
+            if isinstance(evidence_id, str) and evidence_id not in evidence_ids:
+                evidence_ids.append(evidence_id)
+    return evidence_ids
+
+
+def _render_schema_v2_reader_report(topic: TopicKnowledge) -> bytes:
+    """Render the reader-owned schema-v2 report projection."""
+    if not reader_document_ready(topic):
+        raise ValueError("schema version 2 topic requires a ready reader document")
+
+    document = topic.reader_document
+    if not isinstance(document, dict):
+        raise ValueError("schema version 2 topic requires a ready reader document")
+    evidence_by_id = {item.id: item for item in topic.evidence}
+    evidence_ids = _reader_evidence_ids(document)
+    source_numbers = {
+        evidence_id: index
+        for index, evidence_id in enumerate(evidence_ids, start=1)
+    }
+
+    overview = document["overview"]
+    sections = document["sections"]
+    synthesis = document["synthesis"]
+    application_guidance = document["application_guidance"]
+    boundary_notes = document["boundary_notes"]
+    if not all(
+        isinstance(value, list)
+        for value in (sections, application_guidance, boundary_notes)
+    ) or not all(
+        isinstance(value, dict) for value in (overview, synthesis)
+    ):
+        raise ValueError("schema version 2 topic requires a ready reader document")
+
+    lines = [f"# {_inline(topic.title)}", "", "## Overview", ""]
+    lines.extend(
+        _paragraphs(
+            overview["paragraphs"], source_numbers, overview["evidence_ids"]
+        )
+    )
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        lines.extend(["", f"## {_inline(section['heading'])}", ""])
+        lines.extend(
+            _paragraphs(
+                section["paragraphs"],
+                source_numbers,
+                section["evidence_ids"],
+            )
+        )
+        for point in section["key_points"]:
+            lines.append(f"- {_inline(point)}")
+
+    lines.extend(["", "## Synthesis", ""])
+    lines.extend(
+        _paragraphs(
+            synthesis["paragraphs"], source_numbers, synthesis["evidence_ids"]
+        )
+    )
+    lines.extend(["", "## Applying the Knowledge", ""])
+    for guidance in application_guidance:
+        if isinstance(guidance, dict):
+            lines.append(
+                f"- {_inline(guidance['text'])}"
+                f"{_source_notes(guidance['evidence_ids'], source_numbers)}"
+            )
+    lines.extend(["", "## Boundaries and Uncertainty", ""])
+    for note in boundary_notes:
+        if isinstance(note, dict):
+            lines.append(
+                f"- {_inline(note['text'])}"
+                f"{_source_notes(note.get('evidence_ids', []), source_numbers)}"
+            )
+    lines.extend(["", "## Sources", ""])
+    for evidence_id in evidence_ids:
+        lines.append(
+            f"[{source_numbers[evidence_id]}] "
+            f"{_inline(evidence_by_id[evidence_id].source)}"
+        )
+    return ("\n".join(lines).rstrip() + "\n").encode("utf-8")
+
+
+def _render_schema_v1_audit_compatibility(topic: TopicKnowledge) -> bytes:
+    """Render the historical audit projection for schema-v1 topics only."""
     lines = [
         f"# {_inline(topic.title)}",
         "",
@@ -151,6 +273,14 @@ def render_knowledge_report(topic: TopicKnowledge) -> bytes:
         )
 
     return ("\n".join(lines).rstrip() + "\n").encode("utf-8")
+
+
+def render_knowledge_report(topic: TopicKnowledge) -> bytes:
+    """Render a deterministic reader report or schema-v1 audit compatibility."""
+    topic.validate()
+    if topic.schema_version == 1:
+        return _render_schema_v1_audit_compatibility(topic)
+    return _render_schema_v2_reader_report(topic)
 
 
 def render_topic_summary(topic: TopicKnowledge, source_sha256: str) -> str:
