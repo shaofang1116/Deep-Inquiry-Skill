@@ -172,8 +172,8 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 
 1. **自主学习**：持续选择最高价值缺口，先公开 investigation plan，再整合证据，
    经 skeptic review 后原子提交一个 delta，最后由 convergence owner 判断继续或完成。
-   `integrate_learning` 必须返回完整 `reader_document`；`skeptic_review` 必须在发布前
-   明确批准它或列出 reader-document 缺陷。
+   新 schema-v3 发布中的 `integrate_learning` 必须返回完整 reader-document v2；
+   `skeptic_review` 必须在发布前明确批准它或列出 reader-document 缺陷。
    真正收敛时，内核把当前已发布知识确定性渲染为
    `topics/<topic-id>/reports/v<version>.md`，并在完成结果的 `report_path`
    返回绝对路径。checkpoint 中止不生成报告。
@@ -182,20 +182,71 @@ python3 "$SKILL_DIR/scripts/cli.py" --json --knowledge-root "<全局知识库>" 
 
 ### 读者文档契约
 
-`reader_document` 是 schema-v2 topic 的 canonical reader-facing knowledge
-document，不是收敛后的额外提示词，也不是 Markdown 载荷。其纯文本区块在
-`integrate_learning` 中撰写，在 `skeptic_review` 中审查，并与事实 delta 原子持久化；
-renderer 只格式化这份已存内容。
+`TopicKnowledge.reader_document` 是 canonical reader-facing knowledge
+document，不是收敛后的额外提示词、Markdown 载荷或独立 knowledge model。新 schema-v3
+topic 包含 reader-document v2。其纯文本区块在 `integrate_learning` 中撰写，在
+`skeptic_review` 中审查，并与事实 delta 原子持久化；renderer 只格式化已存内容，
+不得推断 concepts、relationships 或 mechanisms。
 
-文档必须解释机制链、条件、跨维度综合、应用方法以及边界或不确定性。它必须覆盖每个已声明
-维度，并以 active 或 disputed claims 及其引用的证据支撑每一个实质区块。原子主张的列表
-不能替代连贯的解释性正文。
+下列语言无关的 reader-document v2 字段必须严格按约定使用。下方 JSON 清单是英文
+canonical reader-document v2 契约的完整镜像；它列出完整 document 顶级字段和关键嵌套
+字段集。即使运行时允许某些可选字段缺失，清单中的字段名仍保持语言无关。
 
-下列语言无关字段必须严格按约定使用：`schema_version`、`overview`、`sections`、
-`synthesis`、`application_guidance`、`boundary_notes`、`claim_ids`、`evidence_ids`、
-`gap_ids` 与 `dimension_refs`。section 正文面向读者，禁止叙述 investigation plan、gate、
-cursor 状态、cycle history 或宿主工作流。稳定 claim kind 包括 `mechanism`、`conditions`、
-`boundary` 与 `synthesis`。
+### Canonical Reader-Document v2 Contract（规范镜像）
+
+```json
+{
+  "contract": "reader_document_v2",
+  "schema_version": 2,
+  "field_sets": {
+    "document": ["schema_version", "orientation", "domain_map", "sections", "synthesis", "transfer_guidance", "boundary_notes", "further_learning"],
+    "orientation": ["central_question", "scope", "current_conclusion", "paragraphs", "claim_ids", "evidence_ids", "narrow_proposition"],
+    "domain_map": ["concepts", "relationships", "keystone_concept_ids", "prerequisite_edges", "key_variables"],
+    "concept": ["id", "label", "definition", "claim_ids", "evidence_ids"],
+    "relationship": ["id", "type", "from_concept_id", "to_concept_id", "condition", "claim_ids", "evidence_ids"],
+    "prerequisite_edge": ["before_concept_id", "after_concept_id"],
+    "key_variable": ["name", "concept_refs", "change_direction", "effect", "project_input_required", "claim_ids", "evidence_ids"],
+    "section": ["id", "heading", "cognitive_question", "concept_refs", "paragraphs", "mechanism_chain", "dimension_refs", "claim_ids", "evidence_ids"],
+    "text_block": ["text", "claim_ids", "evidence_ids"],
+    "transfer_guidance": ["prompt", "reusable_model", "reevaluate", "concept_refs", "claim_ids", "evidence_ids"],
+    "boundary_note": ["type", "text", "claim_ids", "evidence_ids", "gap_ids"],
+    "further_learning": ["direction", "claim_ids", "evidence_ids", "gap_ids"]
+  },
+  "relationship_types": ["depends_on", "causes", "constrains", "trades_off_with", "exception_to"],
+  "boundary_types": ["knowledge_gap", "evidence_limit", "project_input", "professional_judgment", "frontier_dispute"],
+  "reader_document_review_defects": ["cognitive_map", "mechanism_depth", "dependency_order", "synthesis", "transfer", "boundary_expression", "audit_leakage"],
+  "keystone_concept_ids": {"normal_range": [3, 7], "two_requires_narrow_proposition": true},
+  "lifecycle": {"autonomous_stages": ["anchor", "map_knowledge", "select_gap", "plan_investigation", "integrate_learning", "skeptic_review", "assess_convergence", "checkpoint_or_complete"]},
+  "unready_reason_code": "reader_document_not_ready"
+}
+```
+
+`relationships` 只允许 `depends_on`、`causes`、`constrains`、
+`trades_off_with` 与 `exception_to`。`keystone_concept_ids` 通常包含
+3 到 7 个 concepts。`orientation.narrow_proposition` 是布尔例外标记：
+当 `keystone_concept_ids` 只有 2 个 concepts 时必须为 `true`，否则 2 个 concepts
+无效。`prerequisite_edges` 描述解释顺序而非因果方向。`mechanism_chain` 以机制链表达：
+condition or input -> intermediate effect -> consequence -> implication。
+
+每个实质区块都必须由 active 或 disputed claims 及其引用的证据支撑。多维 topic 的
+`synthesis` 必须至少引用两个 coverage dimensions 的 claims，并给出单一章节无法得到的
+跨维度综合结论；单维 topic 可以只综合该维度。`transfer_guidance` 通过给读者一个新场景或
+变量变化来推理，承担 application guidance。
+`boundary_notes` 只使用
+`knowledge_gap`、`evidence_limit`、`project_input`、`professional_judgment`
+或 `frontier_dispute`，并明确其限制的结论。原子主张列表不能替代连贯的解释性正文。
+所有 JSON 字段、枚举和 reason codes 均语言无关；未就绪文档以
+`reader_document_not_ready` 阻止收敛。
+
+### Plain reader prose example（纯读者正文示例）
+
+增加保温层厚度会减慢散热，但也会提高成本，并可能压缩其他安全措施可用的空间。
+把同一权衡应用到计划中的外壳时，应先判断该场景中哪一项约束更紧。当地温度范围未知时，
+这个结论的适用范围受限。
+
+schema-v1 topic 及携带 reader-document v1 的 schema-v2 topic 均通过明确的兼容路径保持可读。
+携带 reader-document v1 的 schema-v2 topic 可通过 legacy readiness 在兼容路径完成，并渲染不可变报告；其旧字段不能作为新 schema-v3 发布的契约。
+面向读者的正文不得叙述 investigation plan、gate、cursor 状态、cycle history 或宿主工作流。
 
 ## 协议铁律（规则，不交给模型自由决定）
 
@@ -238,9 +289,14 @@ cursor 状态、cycle history 或宿主工作流。稳定 claim kind 包括 `mec
   heuristic 规则仍计入最低深度，但对外展示（压缩解释/教学）必须经 `render_rule` 附带
   「经验启发式，须以当地规划/现行规范为准」，不得写成确定规则；逻辑推导型无数值规则无需溯源。
   证据条目支持 `citation`（规范编号级出处），随证据簿持久化。
-- **读者文档审查属于怀疑者准入的一部分。** `skeptic_review` 必须拒绝粗浅、无证据支撑、
-  漏掉 coverage dimension 或叙述工作流的文档。schema-v2 的发布必须带完整且已批准的
-  `reader_document`；schema-v1 只为兼容读取保留，不能生成新的收敛报告。
+- **读者文档审查属于怀疑者准入的一部分。** `skeptic_review` 记录
+  `reader_document_review`，并且只要 `cognitive_map`、`mechanism_depth`、
+  `dependency_order`、`synthesis`、`transfer`、`boundary_expression` 或
+  `audit_leakage` 任一类别非空就必须拒绝。新 schema-v3 发布必须带完整且已批准的
+  reader-document v2；schema-v1 和 schema-v2 兼容状态不是新 schema-v3 发布契约；携带
+  reader-document v1 的 schema-v2 topic 仍可走 legacy readiness 与 compat completion。
+- **生命周期始终是八阶段。** 既有八阶段图已经完整；reader-document v2 不引入第九阶段、
+  独立文档发布或可变文档修订。
 - 查询不得写入用户画像、教学动作、反馈状态或任何 durable knowledge 字段。
 - `ask` 兼容别名在首个后续 major version 前删除；若无外部依赖证据，不得延长。
 - 扩张必须回连中心命题，回答「这轮如何改变了我对命题的理解」；答不出即低价值扩张。
@@ -281,8 +337,8 @@ cursor 状态、cycle history 或宿主工作流。稳定 claim kind 包括 `mec
 
 对外不展示内部流程表演。学习完成返回 knowledge version、delta history、未决 deferred gaps
 和 convergence reason；真正收敛还返回不可变 Markdown 文档的 `report_path`。
-schema-v2 文档是 reader-facing knowledge document，按概览、解释性章节、跨维度综合、应用、
-边界与紧凑来源组织。它是确定性的，只投影 canonical `TopicKnowledge`，不再次调用模型或补写
-未沉淀内容；其中没有 claim、evidence、gap 或 convergence-history registry，审计状态仍可持久化，
-但不是报告的主要叙事。文档写入失败时不得把 run 标记为 complete，必须保留 completion cursor
-供原地重试；查询返回当前版本的知识投影，不伪装成个性化教学。
+schema-v3 文档是 reader-facing knowledge document，按 orientation、紧凑 domain map、按前提顺序的
+解释性章节、mechanism chains、transfer guidance、typed boundaries 与紧凑来源组织。它是确定性的，
+只投影 canonical `TopicKnowledge`，不再次调用模型或补写未沉淀内容；其中没有 claim、evidence、gap 或 convergence-history registry，审计状态仍可持久化，但不是报告的主要叙事。文档写入失败时
+不得把 run 标记为 complete，必须保留 completion cursor 供原地重试；查询返回当前版本的知识投影，
+不伪装成个性化教学。

@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .knowledge_schema import READER_DOCUMENT_DEFECT_CATEGORIES
 from .schema import DIM_SOURCE_ANCHOR_KINDS, DialogGoal, GapType, TeachingAction
 
 # 判断点名称
@@ -84,11 +85,11 @@ _AUTONOMOUS_AGENT_SPECS = {
         ["plan"],
     ),
     INTEGRATE_LEARNING: (
-        "Propose one validated knowledge delta and a complete reader_document "
-        "without persisting either. The document must explain mechanisms, "
-        "conditions, cross-dimension relationships, application guidance, and "
-        "boundaries or uncertainty. Do not narrate workflow, gates, plans, or "
-        "cycle history.",
+        "Propose one validated knowledge delta and a complete schema-version-2 "
+        "reader_document without persisting either. The document must explain "
+        "mechanisms, conditions, cross-dimension relationships, application "
+        "guidance, and boundaries or uncertainty. Do not narrate workflow, "
+        "gates, plans, or cycle history.",
         [
             "delta",
             "claims",
@@ -102,13 +103,12 @@ _AUTONOMOUS_AGENT_SPECS = {
     ),
     SKEPTIC_REVIEW: (
         "Review the proposed integration, including its complete "
-        "reader_document, for unresolved structural defects, unsupported "
-        "synthesis, missing coverage, misleading certainty, and workflow "
-        "narration.",
+        "schema-version-2 reader_document, for unresolved structural defects "
+        "and each reader-document cognitive defect category. Reject the "
+        "document when any defect list is non-empty.",
         [
             "structural_hit",
-            "reader_document_approved",
-            "reader_document_defects",
+            "reader_document_review",
         ],
     ),
     ASSESS_CONVERGENCE: (
@@ -135,42 +135,150 @@ _INITIALIZE_TOPIC_FIELDS = (
 )
 
 _READER_DOCUMENT_TEMPLATE = {
-    "schema_version": 1,
-    "overview": {
+    "schema_version": 2,
+    "orientation": {
+        "central_question": "reader-facing central question",
+        "scope": "reader-facing scope",
+        "current_conclusion": {
+            "text": "grounded current conclusion",
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
+        },
         "paragraphs": ["reader-facing orientation"],
         "claim_ids": ["active-or-disputed-claim-id"],
         "evidence_ids": [],
+    },
+    "domain_map": {
+        "concepts": [
+            {
+                "id": "stable-concept-a",
+                "label": "reader-facing concept A",
+                "definition": "grounded concept definition A",
+                "claim_ids": ["active-or-disputed-claim-id"],
+                "evidence_ids": [],
+            },
+            {
+                "id": "stable-concept-b",
+                "label": "reader-facing concept B",
+                "definition": "grounded concept definition B",
+                "claim_ids": ["active-or-disputed-claim-id"],
+                "evidence_ids": [],
+            },
+            {
+                "id": "stable-concept-c",
+                "label": "reader-facing concept C",
+                "definition": "grounded concept definition C",
+                "claim_ids": ["active-or-disputed-claim-id"],
+                "evidence_ids": [],
+            }
+        ],
+        "relationships": [],
+        "keystone_concept_ids": [
+            "stable-concept-a",
+            "stable-concept-b",
+            "stable-concept-c",
+        ],
+        "prerequisite_edges": [
+            {
+                "before_concept_id": "stable-concept-a",
+                "after_concept_id": "stable-concept-b",
+            },
+            {
+                "before_concept_id": "stable-concept-b",
+                "after_concept_id": "stable-concept-c",
+            },
+        ],
+        "key_variables": [
+            {
+                "name": "reader-facing variable",
+                "concept_refs": ["stable-concept-a"],
+                "change_direction": "relevant direction",
+                "effect": "grounded reader-facing effect",
+                "claim_ids": ["active-or-disputed-claim-id"],
+                "evidence_ids": [],
+                "project_input_required": False,
+            }
+        ],
     },
     "sections": [
         {
             "id": "stable-section-id",
             "heading": "reader-facing heading",
+            "cognitive_question": "reader-facing cognitive question",
+            "concept_refs": ["stable-concept-a"],
             "paragraphs": ["connected explanatory paragraph"],
-            "key_points": [],
+            "mechanism_chain": [
+                "condition or input",
+                "intermediate effect",
+                "consequence",
+                "implication",
+            ],
             "dimension_refs": ["coverage dimension"],
             "claim_ids": ["active-or-disputed-claim-id"],
             "evidence_ids": [],
-        }
+        },
+        {
+            "id": "stable-section-id-b",
+            "heading": "reader-facing heading B",
+            "cognitive_question": "reader-facing cognitive question B",
+            "concept_refs": ["stable-concept-b"],
+            "paragraphs": ["connected explanatory paragraph B"],
+            "mechanism_chain": [
+                "condition or input",
+                "intermediate effect",
+                "consequence",
+                "implication",
+            ],
+            "dimension_refs": ["coverage dimension"],
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
+        },
+        {
+            "id": "stable-section-id-c",
+            "heading": "reader-facing heading C",
+            "cognitive_question": "reader-facing cognitive question C",
+            "concept_refs": ["stable-concept-c"],
+            "paragraphs": ["connected explanatory paragraph C"],
+            "mechanism_chain": [
+                "condition or input",
+                "intermediate effect",
+                "consequence",
+                "implication",
+            ],
+            "dimension_refs": ["coverage dimension"],
+            "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
+        },
     ],
     "synthesis": {
         "paragraphs": ["cross-dimension explanation"],
         "claim_ids": ["active-or-disputed-claim-id"],
         "evidence_ids": [],
     },
-    "application_guidance": [
+    "transfer_guidance": [
         {
-            "text": "practical action or decision rule",
+            "prompt": "reader-facing transfer scenario or question",
+            "reusable_model": "reusable model component",
+            "reevaluate": ["case-specific variable or fact"],
+            "concept_refs": [
+                "stable-concept-a",
+                "stable-concept-b",
+                "stable-concept-c",
+            ],
             "claim_ids": ["active-or-disputed-claim-id"],
             "evidence_ids": [],
         }
     ],
     "boundary_notes": [
         {
+            "type": "evidence_limit",
             "text": "limitation, exception, or uncertainty",
             "claim_ids": ["active-or-disputed-claim-id"],
+            "evidence_ids": [],
             "gap_ids": [],
         }
     ],
+    "further_learning": [],
 }
 
 GAP_TYPES = [g.value for g in GapType]
@@ -800,10 +908,13 @@ def build_autonomous_request(
         template.update(
             {
                 "structural_hit": False,
-                "reader_document_approved": False,
-                "reader_document_defects": [
-                    "reader-facing defect requiring revision"
-                ],
+                "reader_document_review": {
+                    "approved": False,
+                    "defects": {
+                        category: ["reader-facing defect requiring revision"]
+                        for category in READER_DOCUMENT_DEFECT_CATEGORIES
+                    },
+                },
             }
         )
     return JudgmentRequest(
@@ -841,24 +952,58 @@ def validate_autonomous_response(
             raise JudgmentError(
                 "skeptic_review structural_hit must be a boolean"
             )
-        if not isinstance(response["reader_document_approved"], bool):
+        document_review = response["reader_document_review"]
+        if not isinstance(document_review, dict):
             raise JudgmentError(
-                "skeptic_review reader_document_approved must be a boolean"
+                "skeptic_review reader_document_review must be an object"
             )
-        defects = response["reader_document_defects"]
-        if not isinstance(defects, list) or not all(
-            isinstance(defect, str) and defect.strip() for defect in defects
+        if set(document_review) != {"approved", "defects"}:
+            raise JudgmentError(
+                "skeptic_review reader_document_review requires approved and defects"
+            )
+        approved = document_review["approved"]
+        defects = document_review["defects"]
+        if not isinstance(approved, bool):
+            raise JudgmentError(
+                "skeptic_review reader_document_review.approved must be a boolean"
+            )
+        if not isinstance(defects, dict) or set(defects) != set(
+            READER_DOCUMENT_DEFECT_CATEGORIES
         ):
             raise JudgmentError(
-                "skeptic_review reader_document_defects must be a string list"
+                "skeptic_review reader_document_review.defects must define "
+                "every cognitive category"
             )
-        if response["reader_document_approved"] and defects:
+        defect_lists = list(defects.values())
+        if any(
+            not isinstance(defect_list, list)
+            or any(
+                not isinstance(defect, str) or not defect.strip()
+                for defect in defect_list
+            )
+            for defect_list in defect_lists
+        ):
             raise JudgmentError(
-                "skeptic_review approved reader_document must have no defects"
+                "skeptic_review reader_document_review defects must be "
+                "lists of non-empty strings"
             )
-        if not response["reader_document_approved"] and not defects:
+        has_defects = any(defect_lists)
+        if approved and has_defects:
+            raise JudgmentError(
+                "skeptic_review approved reader_document cannot have defects"
+            )
+        if not approved and not has_defects:
             raise JudgmentError(
                 "skeptic_review rejected reader_document must list defects"
+            )
+    if stage == INTEGRATE_LEARNING:
+        document = response["reader_document"]
+        if (
+            not isinstance(document, dict)
+            or document.get("schema_version") != 2
+        ):
+            raise JudgmentError(
+                "integrate_learning reader_document must use schema_version 2"
             )
     return response
 

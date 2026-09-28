@@ -13,10 +13,11 @@ from .knowledge_schema import (
     ConvergencePhase,
     GainLevel,
     GapStatus,
+    KnowledgeSchemaError,
     Priority,
     TopicKnowledge,
 )
-from .reader_document import reader_document_ready
+from .reader_document import ReaderDocumentError, reader_document_ready
 
 
 REQUIRED_FACETS = {
@@ -45,7 +46,15 @@ def evaluate_convergence(
     assessment: ConvergenceAssessment,
 ) -> ConvergenceDecision:
     """Evaluate all stop conditions against canonical topic state."""
-    topic.validate()
+    try:
+        topic.validate()
+    except KnowledgeSchemaError as exc:
+        if isinstance(exc.__cause__, ReaderDocumentError):
+            return _blocked(
+                "reader_document_not_ready",
+                "Knowledge requires a complete reader document before convergence.",
+            )
+        raise
     assessment.validate()
 
     high_value_gaps = sorted(

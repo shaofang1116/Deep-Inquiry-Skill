@@ -317,6 +317,35 @@ class ReaderDocumentSchemaTests(unittest.TestCase):
                         _audit_record("reviewed", {**base_review, **fields})
                     )
 
+    def test_audit_reader_review_rejects_mixed_legacy_and_structured_fields(
+        self,
+    ) -> None:
+        review = {
+            "approved": True,
+            "structural_hit": False,
+            "reason": "The candidate passed skeptical review.",
+            "reader_document_approved": True,
+            "reader_document_defects": [],
+            "reader_document_review": {
+                "approved": False,
+                "defects": {
+                    "cognitive_map": [],
+                    "mechanism_depth": [],
+                    "dependency_order": [],
+                    "synthesis": ["The synthesis omits a condition."],
+                    "transfer": [],
+                    "boundary_expression": [],
+                    "audit_leakage": [],
+                },
+            },
+        }
+
+        with self.assertRaisesRegex(
+            KnowledgeSchemaError,
+            "cannot mix structured and legacy fields",
+        ):
+            PublicationRecord.from_dict(_audit_record("reviewed", review))
+
 
 if __name__ == "__main__":
     unittest.main()

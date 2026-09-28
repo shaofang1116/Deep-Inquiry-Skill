@@ -13,6 +13,16 @@ from .reader_document import (
     reader_document_to_dict,
 )
 
+READER_DOCUMENT_DEFECT_CATEGORIES = (
+    "cognitive_map",
+    "mechanism_depth",
+    "dependency_order",
+    "synthesis",
+    "transfer",
+    "boundary_expression",
+    "audit_leakage",
+)
+
 
 class KnowledgeSchemaError(ValueError):
     """A durable knowledge object violates its data contract."""
@@ -631,17 +641,26 @@ class PublicationRecord:
 
     def _validate_reader_document_review(self) -> None:
         assert self.review is not None
-        fields = {
+        legacy_fields = {
             "reader_document_approved",
             "reader_document_defects",
         }
-        present = fields & set(self.review)
-        if not present:
-            return
-        if present != fields:
+        legacy_present = legacy_fields & set(self.review)
+        if legacy_present and legacy_present != legacy_fields:
             raise KnowledgeSchemaError(
                 "publication_record.review reader document fields must be paired"
             )
+        if legacy_present and "reader_document_review" in self.review:
+            raise KnowledgeSchemaError(
+                "publication_record.review cannot mix structured and legacy fields"
+            )
+        if legacy_present:
+            self._validate_legacy_reader_document_review()
+        if "reader_document_review" in self.review:
+            self._validate_structured_reader_document_review()
+
+    def _validate_legacy_reader_document_review(self) -> None:
+        assert self.review is not None
         approved = self.review["reader_document_approved"]
         defects = self.review["reader_document_defects"]
         if not isinstance(approved, bool):
@@ -665,6 +684,54 @@ class PublicationRecord:
                 "approved reader document review cannot contain defects"
             )
         if not approved and not defects:
+            raise KnowledgeSchemaError(
+                "rejected reader document review must contain defects"
+            )
+
+    def _validate_structured_reader_document_review(self) -> None:
+        assert self.review is not None
+        decision = self.review["reader_document_review"]
+        if not isinstance(decision, dict):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_review must be an object"
+            )
+        if set(decision) != {"approved", "defects"}:
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_review requires "
+                "approved and defects"
+            )
+        approved = decision["approved"]
+        defects = decision["defects"]
+        if not isinstance(approved, bool):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_review.approved "
+                "must be boolean"
+            )
+        if not isinstance(defects, dict) or set(defects) != set(
+            READER_DOCUMENT_DEFECT_CATEGORIES
+        ):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_review.defects must "
+                "define every cognitive category"
+            )
+        if any(
+            not isinstance(defect_list, list)
+            or any(
+                not isinstance(defect, str) or not defect.strip()
+                for defect in defect_list
+            )
+            for defect_list in defects.values()
+        ):
+            raise KnowledgeSchemaError(
+                "publication_record.review.reader_document_review defects must "
+                "be lists of non-empty strings"
+            )
+        has_defects = any(defects.values())
+        if approved and has_defects:
+            raise KnowledgeSchemaError(
+                "approved reader document review cannot contain defects"
+            )
+        if not approved and not has_defects:
             raise KnowledgeSchemaError(
                 "rejected reader document review must contain defects"
             )
@@ -873,6 +940,23 @@ class TopicKnowledge:
             )
         except ReaderDocumentError as exc:
             raise KnowledgeSchemaError(str(exc)) from exc
+        if self.schema_version >= 3:
+            if (
+                self.reader_document is None
+                or self.reader_document.get("schema_version") != 2
+            ):
+                raise KnowledgeSchemaError(
+                    "topic.schema_version 3 or later requires "
+                    "reader_document.schema_version 2"
+                )
+        elif (
+            self.reader_document is not None
+            and self.reader_document.get("schema_version") == 2
+        ):
+            raise KnowledgeSchemaError(
+                "reader_document.schema_version 2 requires "
+                "topic.schema_version 3 or later"
+            )
 
     @staticmethod
     def _validate_delta_references(

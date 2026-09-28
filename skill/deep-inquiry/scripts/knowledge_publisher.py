@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from .knowledge_schema import PublicationRecord, PublicationState, TopicKnowledge
+from .knowledge_schema import (
+    READER_DOCUMENT_DEFECT_CATEGORIES,
+    PublicationRecord,
+    PublicationState,
+    TopicKnowledge,
+)
 from .knowledge_store import KnowledgeStore, VersionConflictError
 from .learner import Learner
 
@@ -82,7 +87,7 @@ class KnowledgePublisher:
             integration=proposed.integration,
             review=reviewed_decision,
         )
-        if not approved or structural_hit:
+        if structural_hit:
             return self._reject(
                 current=current,
                 proposed=proposed,
@@ -90,10 +95,12 @@ class KnowledgePublisher:
                 code="skeptic_structural_hit",
                 reason=reason,
             )
-        if (
-            not reviewed_decision["reader_document_approved"]
-            or reviewed_decision["reader_document_defects"]
-        ):
+        document_review = reviewed_decision["reader_document_review"]
+        document_rejected = (
+            not document_review["approved"]
+            or any(document_review["defects"].values())
+        )
+        if not approved or document_rejected:
             return self._reject(
                 current=current,
                 proposed=proposed,
@@ -113,6 +120,21 @@ class KnowledgePublisher:
                 review=reviewed,
                 code="invalid_candidate",
                 reason=str(exc),
+            )
+        if (
+            next_topic.schema_version != 3
+            or not isinstance(next_topic.reader_document, dict)
+            or next_topic.reader_document.get("schema_version") != 2
+        ):
+            return self._reject(
+                current=current,
+                proposed=proposed,
+                review=reviewed,
+                code="invalid_publication_contract",
+                reason=(
+                    "new publication requires topic schema_version 3 and "
+                    "reader_document schema_version 2"
+                ),
             )
 
         published = self._record(
@@ -176,10 +198,8 @@ class KnowledgePublisher:
             "skeptic_structural_hit": False,
         }
         try:
-            next_topic = self._learner.build_knowledge_candidate(
-                current,
-                update=candidate,
-                allow_missing_reader_document=True,
+            next_topic = self._build_retirement_compatibility_carrier(
+                current, candidate
             )
         except (TypeError, ValueError) as exc:
             raise ValueError(f"invalid retirement candidate: {exc}") from exc
@@ -199,6 +219,16 @@ class KnowledgePublisher:
             published_topic=next_topic,
         )
         return self._outcome(saved, terminal)
+
+    def _build_retirement_compatibility_carrier(
+        self,
+        current: TopicKnowledge,
+        candidate: dict[str, object],
+    ) -> TopicKnowledge:
+        """Build the retirement-only schema-v2 carrier outside normal publish."""
+        return self._learner._build_retirement_compatibility_candidate(
+            current, update=candidate
+        )
 
     def _reject(
         self,
@@ -290,31 +320,64 @@ class KnowledgePublisher:
             "reader_document_defects",
         }
         present = document_fields & set(review)
-        if present != document_fields:
+        structured_present = "reader_document_review" in review
+        if structured_present and present:
             raise ValueError(
-                "reader document review requires approval and defects"
+                "reader document review cannot mix structured and legacy fields"
             )
-        document_approved = review["reader_document_approved"]
-        document_defects = review["reader_document_defects"]
-        if not isinstance(document_approved, bool):
-            raise ValueError("reader_document_approved must be boolean")
-        if (
-            not isinstance(document_defects, list)
-            or any(
-                not isinstance(defect, str) or not defect.strip()
-                for defect in document_defects
+        if present:
+            raise ValueError(
+                "legacy reader document review is only supported for historical "
+                "audit records"
             )
+        if not structured_present:
+            raise ValueError(
+                "reader_document_review is required for publication"
+            )
+        decision["reader_document_review"] = (
+            KnowledgePublisher._structured_document_review(
+                review["reader_document_review"]
+            )
+        )
+        return decision
+
+    @staticmethod
+    def _structured_document_review(value: object) -> dict[str, object]:
+        if not isinstance(value, dict) or set(value) != {"approved", "defects"}:
+            raise ValueError(
+                "reader_document_review requires approved and defects"
+            )
+        approved = value["approved"]
+        defects = value["defects"]
+        if not isinstance(approved, bool):
+            raise ValueError("reader_document_review.approved must be boolean")
+        if not isinstance(defects, dict) or set(defects) != set(
+            READER_DOCUMENT_DEFECT_CATEGORIES
         ):
             raise ValueError(
-                "reader_document_defects must be a list of non-empty strings"
+                "reader_document_review.defects must define every cognitive category"
             )
-        if document_approved and document_defects:
+        normalized_defects: dict[str, list[str]] = {}
+        for category in READER_DOCUMENT_DEFECT_CATEGORIES:
+            category_defects = defects[category]
+            if (
+                not isinstance(category_defects, list)
+                or any(
+                    not isinstance(defect, str) or not defect.strip()
+                    for defect in category_defects
+                )
+            ):
+                raise ValueError(
+                    "reader_document_review defects must be lists of "
+                    "non-empty strings"
+                )
+            normalized_defects[category] = list(category_defects)
+        has_defects = any(normalized_defects.values())
+        if approved and has_defects:
             raise ValueError("approved reader document cannot have defects")
-        if not document_approved and not document_defects:
+        if not approved and not has_defects:
             raise ValueError("rejected reader document must list defects")
-        decision["reader_document_approved"] = document_approved
-        decision["reader_document_defects"] = list(document_defects)
-        return decision
+        return {"approved": approved, "defects": normalized_defects}
 
     @staticmethod
     def _safe_reason(reason: str) -> str:

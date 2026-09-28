@@ -222,8 +222,18 @@ class LowGainMajorDeltaTests(unittest.TestCase):
                     "approved": True,
                     "structural_hit": False,
                     "reason": "The candidate passed skeptical review.",
-                    "reader_document_approved": True,
-                    "reader_document_defects": [],
+                    "reader_document_review": {
+                        "approved": True,
+                        "defects": {
+                            "cognitive_map": [],
+                            "mechanism_depth": [],
+                            "dependency_order": [],
+                            "synthesis": [],
+                            "transfer": [],
+                            "boundary_expression": [],
+                            "audit_leakage": [],
+                        },
+                    },
                 },
                 candidate_id="invalid-low-gain-retirement",
             )

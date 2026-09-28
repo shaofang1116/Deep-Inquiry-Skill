@@ -84,16 +84,24 @@ satisfy that purpose.
 
 ## 7. Verified State and Risks
 
-Schema-v2 `TopicKnowledge` now carries a skeptic-reviewed `reader_document`.
-The deterministic renderer formats that canonical document as reader-facing
-Markdown and emits no audit registry, internal IDs, or convergence history.
-Schema-v1 audit rendering remains a strictly isolated compatibility exception;
-historical reports and snapshots are not rewritten.
+Schema-v3 `TopicKnowledge` now carries a skeptic-reviewed reader-document v2.
+The canonical document includes an orientation, compact domain map,
+prerequisite order, grounded typed relationships, mechanism chains, variables,
+transfer guidance, and typed boundaries. The deterministic renderer formats
+only that approved document and emits no audit registry, internal IDs, or
+convergence history. Schema-v1 audit rendering and schema-v2 reader-document
+v1 rendering remain strictly isolated compatibility exceptions; historical
+reports and snapshots are not rewritten.
 
-The English canonical protocol and Chinese mirror both prescribe mechanism
-chains, conditions, cross-dimension synthesis, application, and boundaries.
-The remaining risk is host-quality variance in authored prose, mitigated by
-reference validation, skeptic approval, and two-domain reader acceptance.
+The English canonical protocol and Chinese mirror prescribe equivalent
+reader-document v2 fields, relation and boundary enums, skeptic defect
+categories, mechanism chains, cross-dimension synthesis, application through
+transfer, and the unchanged eight-stage lifecycle. Task 6 cross-topic fixtures
+and provenance-bound blind-reader acceptance are complete. Structural, runtime,
+renderer, completion-retry, and protocol checks cover the contract. Residual
+risk remains host-quality variance in authored cognitive organization, real
+host transport behavior, completeness of actual project inputs, and recovery
+when report writing succeeds but `_save_run(complete)` fails.
 
 ## 8. Alignment Use
 

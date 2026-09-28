@@ -484,11 +484,8 @@ class HostRuntimeCoordinator:
             return self._next_cursor(cursor, "skeptic_review", payload)
         if cursor.stage == "skeptic_review":
             payload["structural_hit"] = validated["structural_hit"]
-            payload["reader_document_approved"] = validated[
-                "reader_document_approved"
-            ]
-            payload["reader_document_defects"] = validated[
-                "reader_document_defects"
+            payload["reader_document_review"] = validated[
+                "reader_document_review"
             ]
             marker = self._commit_marker(payload)
             return self._next_cursor(
@@ -518,11 +515,36 @@ class HostRuntimeCoordinator:
         if self._commit_marker(cursor.payload) != cursor.commit_marker:
             raise RuntimeContractError("commit marker does not match payload")
 
+        legacy_review_fields = {
+            "reader_document_approved",
+            "reader_document_defects",
+        }
+        if (
+            "reader_document_review" not in cursor.payload
+            and legacy_review_fields <= set(cursor.payload)
+        ):
+            # Legacy cursors cannot publish through the structured review gate.
+            return self._cursor_from_cursor(
+                cursor,
+                stage="integrate_learning",
+                expected_version=cursor.expected_version,
+                payload={
+                    "cycle": cursor.payload["cycle"],
+                    "selected_gap": cursor.payload["selected_gap"],
+                    "plan": cursor.payload["plan"],
+                },
+            )
+
         integration = dict(cursor.payload["integration"])
         integration["cycle"] = cursor.payload["cycle"]
         integration["skeptic_structural_hit"] = cursor.payload["structural_hit"]
-        document_approved = cursor.payload["reader_document_approved"]
-        document_defects = cursor.payload["reader_document_defects"]
+        document_review = cursor.payload["reader_document_review"]
+        document_approved = document_review["approved"]
+        document_defects = [
+            defect
+            for defects in document_review["defects"].values()
+            for defect in defects
+        ]
         approved = not cursor.payload["structural_hit"] and document_approved
         if cursor.payload["structural_hit"]:
             reason = "Skeptic structural review rejected the candidate."
@@ -537,8 +559,7 @@ class HostRuntimeCoordinator:
             "approved": approved,
             "structural_hit": cursor.payload["structural_hit"],
             "reason": reason,
-            "reader_document_approved": document_approved,
-            "reader_document_defects": document_defects,
+            "reader_document_review": document_review,
         }
         try:
             outcome = self.publisher.publish_or_reject(
@@ -567,7 +588,7 @@ class HostRuntimeCoordinator:
                     "cycle": cursor.payload["cycle"],
                     "selected_gap": cursor.payload["selected_gap"],
                     "plan": cursor.payload["plan"],
-                    "reader_document_defects": list(document_defects),
+                    "reader_document_review": document_review,
                 },
             )
         if outcome.state != "published" or outcome.topic is None:

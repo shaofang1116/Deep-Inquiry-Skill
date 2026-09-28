@@ -14,10 +14,13 @@ The deterministic Python kernel owns protocol validation, state transitions, per
 
 Queries do not modify stored knowledge or infer a user profile.
 
-The converged report is not an audit export. It deterministically formats the
-skeptic-reviewed reader document stored with canonical topic knowledge: an
-overview, explanatory sections, cross-dimension synthesis, application
-guidance, boundaries, and compact source notes. Audit history remains durable
+The converged report is not an audit export. For a new schema-v3 topic, it
+deterministically formats the skeptic-reviewed reader document stored with
+canonical topic knowledge: an orientation, compact domain map,
+prerequisite-ordered explanatory sections, grounded mechanism chains, transfer
+guidance, typed boundaries, and compact source notes. The cognitive
+organization lives inside that reader document; completed reports remain
+immutable and are not independently editable. Audit history remains durable
 for inspection but is not presented as the report's primary narrative.
 
 ## Requirements

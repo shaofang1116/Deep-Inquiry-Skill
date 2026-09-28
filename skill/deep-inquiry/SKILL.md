@@ -113,30 +113,91 @@ Use `cancel` to abandon only the active runtime round and `state` to inspect dur
 
 ## Default vNext Paths
 
-1. **Autonomous learning:** choose the highest-value gap, publish an investigation plan, integrate evidence, conduct skeptic review, atomically commit one delta, then let the convergence owner continue or complete. `integrate_learning` must return a complete `reader_document`; `skeptic_review` must explicitly approve it or identify reader-document defects before publication. On true convergence, the kernel deterministically renders published knowledge to `topics/<topic-id>/reports/v<version>.md` and returns its absolute `report_path`. A checkpoint produces no report.
+1. **Autonomous learning:** choose the highest-value gap, publish an investigation plan, integrate evidence, conduct skeptic review, atomically commit one delta, then let the convergence owner continue or complete. For a new schema-v3 publication, `integrate_learning` must return a complete reader-document v2 and `skeptic_review` must explicitly approve it or identify reader-document defects before publication. On true convergence, the kernel deterministically renders published knowledge to `topics/<topic-id>/reports/v<version>.md` and returns its absolute `report_path`. A checkpoint produces no report.
 2. **Optional query:** `query` reads the selected topic's current version and returns active claims, supporting evidence, and unresolved boundaries. It creates no session, writes no knowledge, and infers no user level. `ask` is an identical compatibility alias.
 
 ### Reader-Document Contract
 
-`reader_document` is the canonical reader-facing knowledge document for a
-schema-v2 topic, not a post-convergence prompt and not a Markdown payload. Its
+`TopicKnowledge.reader_document` is the canonical reader-facing knowledge
+document, not a post-convergence prompt, a Markdown payload, or a separate
+knowledge model. A new schema-v3 topic contains reader-document v2. Its
 plain-text blocks are authored during `integrate_learning`, reviewed during
 `skeptic_review`, and stored atomically with the factual delta. The renderer
-only formats that stored content.
+only formats that stored content; it does not infer concepts, relations, or
+mechanisms.
 
-The document must explain a mechanism chain, conditions, cross-dimension
-synthesis, application guidance, and boundaries or uncertainty. It must cover
-every declared dimension and ground each substantive block in active or
-disputed claims plus the evidence it references. A list of atomic claims is
-not an adequate substitute for connected explanatory prose.
+Use the language-independent reader-document v2 fields exactly as specified.
+The JSON manifest below is the canonical reader-document v2 contract. It names
+the complete document top-level and critical nested field sets; fields named
+there remain language-independent even where runtime validation permits an
+optional field to be absent.
 
-Use the language-independent fields exactly as specified:
-`schema_version`, `overview`, `sections`, `synthesis`,
-`application_guidance`, `boundary_notes`, `claim_ids`, `evidence_ids`,
-`gap_ids`, and `dimension_refs`. Section text is reader-facing; it must not
-narrate investigation plans, gates, cursor state, cycle history, or host
-workflow. The stable claim kinds include `mechanism`, `conditions`,
-`boundary`, and `synthesis`.
+### Canonical Reader-Document v2 Contract
+
+```json
+{
+  "contract": "reader_document_v2",
+  "schema_version": 2,
+  "field_sets": {
+    "document": ["schema_version", "orientation", "domain_map", "sections", "synthesis", "transfer_guidance", "boundary_notes", "further_learning"],
+    "orientation": ["central_question", "scope", "current_conclusion", "paragraphs", "claim_ids", "evidence_ids", "narrow_proposition"],
+    "domain_map": ["concepts", "relationships", "keystone_concept_ids", "prerequisite_edges", "key_variables"],
+    "concept": ["id", "label", "definition", "claim_ids", "evidence_ids"],
+    "relationship": ["id", "type", "from_concept_id", "to_concept_id", "condition", "claim_ids", "evidence_ids"],
+    "prerequisite_edge": ["before_concept_id", "after_concept_id"],
+    "key_variable": ["name", "concept_refs", "change_direction", "effect", "project_input_required", "claim_ids", "evidence_ids"],
+    "section": ["id", "heading", "cognitive_question", "concept_refs", "paragraphs", "mechanism_chain", "dimension_refs", "claim_ids", "evidence_ids"],
+    "text_block": ["text", "claim_ids", "evidence_ids"],
+    "transfer_guidance": ["prompt", "reusable_model", "reevaluate", "concept_refs", "claim_ids", "evidence_ids"],
+    "boundary_note": ["type", "text", "claim_ids", "evidence_ids", "gap_ids"],
+    "further_learning": ["direction", "claim_ids", "evidence_ids", "gap_ids"]
+  },
+  "relationship_types": ["depends_on", "causes", "constrains", "trades_off_with", "exception_to"],
+  "boundary_types": ["knowledge_gap", "evidence_limit", "project_input", "professional_judgment", "frontier_dispute"],
+  "reader_document_review_defects": ["cognitive_map", "mechanism_depth", "dependency_order", "synthesis", "transfer", "boundary_expression", "audit_leakage"],
+  "keystone_concept_ids": {"normal_range": [3, 7], "two_requires_narrow_proposition": true},
+  "lifecycle": {"autonomous_stages": ["anchor", "map_knowledge", "select_gap", "plan_investigation", "integrate_learning", "skeptic_review", "assess_convergence", "checkpoint_or_complete"]},
+  "unready_reason_code": "reader_document_not_ready"
+}
+```
+
+`relationships` permits only `depends_on`, `causes`, `constrains`,
+`trades_off_with`, and `exception_to`. `keystone_concept_ids` normally contains
+three to seven concepts. `orientation.narrow_proposition` is a Boolean exception
+flag and must be `true` when `keystone_concept_ids` contains two concepts; two
+is otherwise invalid. `prerequisite_edges` describe explanatory order rather
+than causal direction. A `mechanism_chain` expresses condition or input ->
+intermediate effect -> consequence -> implication.
+
+Every substantive block must be grounded in active or disputed claims and the
+evidence it references. For a topic with multiple coverage dimensions,
+`synthesis` must reference claims from at least two dimensions and add a
+cross-dimension conclusion unavailable from one section alone; a
+single-dimension topic may synthesize from that one dimension.
+`transfer_guidance` provides application guidance by giving the reader a new
+scenario or variable change to reason through.
+`boundary_notes` use only
+`knowledge_gap`, `evidence_limit`, `project_input`, `professional_judgment`,
+or `frontier_dispute`, and identify the conclusion they constrain. A list of
+atomic claims is not an adequate substitute for connected explanatory prose.
+All JSON fields, enums, and reason codes are language-independent; an unready
+document blocks convergence with `reader_document_not_ready`.
+
+### Plain reader prose example
+
+Changing the insulation thickness slows heat loss, but it also increases cost
+and may reduce the space available for other safety features. Apply the same
+trade-off to the planned enclosure by checking which constraint is tighter in
+that setting. The conclusion is limited where the local temperature range is
+unknown.
+
+Schema-v1 topics and schema-v2 topics carrying reader-document v1 remain
+readable through explicit compatibility paths. A schema-v2 topic carrying
+reader-document v1 may pass legacy readiness and complete through its
+compatibility path, including immutable report rendering; its legacy fields
+cannot serve as the contract for a new schema-v3 publication. Reader-facing
+prose must not narrate investigation plans, gates, cursor state, cycle history,
+or host workflow.
 
 ## Protocol Invariants
 
@@ -151,10 +212,16 @@ workflow. The stable claim kinds include `mechanism`, `conditions`,
 - **Auditable dimension derivation.** Every `coverage_dimensions` entry has exactly one `dimension_sources` record. A `phase` source must preserve a `scope_qualifiers` `source_qualifier`; a `cross_cutting` source needs `reason` and root `depends_on` all relevant phases; a `standalone` source needs a reason. At least one phase is required; new anchors cannot create `legacy`. Old sessions migrate missing provenance as `legacy` only to remain loadable.
 - **Evidence provenance and no false precision.** A unit-bearing numeric value in `dimension_rules` needs either `basis` at standard/clause level or `heuristic: true`; otherwise reject it. A heuristic still counts for depth but public rendering must state it is a heuristic requiring local planning/current-standard confirmation. Logical rules without numbers need no provenance. Evidence may persist `citation`.
 - **Reader-document review is part of skeptical acceptance.** `skeptic_review`
-  must reject a document that is shallow, ungrounded, missing a coverage
-  dimension, or narrates the workflow. A schema-v2 publication requires a
-  complete approved `reader_document`; schema-v1 remains readable only as a
-  compatibility state and cannot produce a new converged report.
+  records `reader_document_review` and must reject any non-empty category in
+  `cognitive_map`, `mechanism_depth`, `dependency_order`, `synthesis`,
+  `transfer`, `boundary_expression`, or `audit_leakage`. A new schema-v3
+  publication requires a complete approved reader-document v2. Schema-v1 and
+  schema-v2 compatibility states are not new schema-v3 publication contracts;
+  schema-v2 topics carrying reader-document v1 may still use legacy readiness
+  and compatibility completion.
+- **The lifecycle remains eight-stage.** The existing eight-stage graph is
+  complete; no ninth stage, separate document publication, or mutable document
+  revision is introduced by reader-document v2.
 - Queries never write user profile, teaching action, feedback state, or durable knowledge.
 - Remove the `ask` alias before the first subsequent major version; do not extend it without external-dependency evidence.
 - Expansion must connect back to the central proposition and state how the round changed its understanding.
@@ -182,13 +249,13 @@ Follow `scripts/failures.py` when these conditions occur: proposition drift rean
 
 Do not expose internal process theater. A completed learning run returns
 knowledge version, delta history, deferred gaps, and convergence reason. True
-convergence also returns immutable Markdown `report_path`. Its schema-v2
-report is a reader-facing knowledge document with overview, explanatory
-sections, cross-dimension synthesis, application, boundaries, and compact
-sources. It is deterministic, only projects canonical `TopicKnowledge`, never
-calls a model again, and never invents unstored content. It contains no claim,
-evidence, gap, or convergence-history registry; audit state remains durable
-but is not the report's primary narrative. A report-write failure must not mark
-the run complete; retain the completion cursor for in-place retry. A query
-returns the current knowledge projection and does not pretend to be
-personalized teaching.
+convergence also returns immutable Markdown `report_path`. Its schema-v3
+report is a reader-facing knowledge document with an orientation, compact
+domain map, prerequisite-ordered explanatory sections, mechanism chains,
+transfer guidance, typed boundaries, and compact sources. It is deterministic,
+only projects canonical `TopicKnowledge`, never calls a model again, and never
+invents unstored content. It contains no claim, evidence, gap, or
+convergence-history registry; audit state remains durable but is not the
+report's primary narrative. A report-write failure must not mark the run
+complete; retain the completion cursor for in-place retry. A query returns the
+current knowledge projection and does not pretend to be personalized teaching.

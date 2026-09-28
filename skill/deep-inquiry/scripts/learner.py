@@ -415,14 +415,38 @@ class Learner:
         current: TopicKnowledge,
         *,
         update: dict[str, Any],
-        allow_missing_reader_document: bool = False,
         schema_version: int = 2,
     ) -> TopicKnowledge:
-        """Construct one validated next projection without durable I/O.
+        """Construct a complete validated next projection without durable I/O."""
+        return self._build_knowledge_candidate(
+            current,
+            update=update,
+            schema_version=schema_version,
+            allow_missing_reader_document=False,
+        )
 
-        Accepted learning publications require complete reader prose. Direct
-        lifecycle retirement is the sole caller allowed to invalidate it.
-        """
+    def _build_retirement_compatibility_candidate(
+        self,
+        current: TopicKnowledge,
+        *,
+        update: dict[str, Any],
+    ) -> TopicKnowledge:
+        """Build the schema-v2/no-document carrier used only by retirement."""
+        return self._build_knowledge_candidate(
+            current,
+            update=update,
+            allow_missing_reader_document=True,
+        )
+
+    def _build_knowledge_candidate(
+        self,
+        current: TopicKnowledge,
+        *,
+        update: dict[str, Any],
+        allow_missing_reader_document: bool,
+        schema_version: int = 2,
+    ) -> TopicKnowledge:
+        """Construct one validated next projection without durable I/O."""
         next_version = current.version + 1
         delta = LearningDelta.from_dict(update.get("delta", {}))
         _validate_disjoint_claim_actions(delta)
@@ -569,6 +593,20 @@ class Learner:
             )
         except ReaderDocumentError as exc:
             raise ValueError(f"invalid reader_document: {exc}") from exc
+        reader_document = candidate_payload["reader_document"]
+        if (
+            current.schema_version >= 3
+            and isinstance(reader_document, dict)
+            and reader_document.get("schema_version") == 1
+        ):
+            raise ValueError(
+                "schema-v3 topic cannot use reader_document.schema_version 1"
+            )
+        if (
+            isinstance(reader_document, dict)
+            and reader_document.get("schema_version") == 2
+        ):
+            candidate_payload["schema_version"] = 3
         candidate = TopicKnowledge.from_dict(candidate_payload)
         return candidate
 

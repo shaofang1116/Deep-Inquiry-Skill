@@ -257,10 +257,10 @@ class VNextHost:
             )
         result = project_durable_learning_result(topic, decision)
         if decision.converged:
-            if topic.schema_version != 2 or not reader_document_ready(topic):
+            if topic.schema_version < 2 or not reader_document_ready(topic):
                 raise VNextHostError(
                     "cannot complete a converged report without a ready "
-                    "schema-v2 reader document"
+                    "reader document"
                 )
             try:
                 report_path = self.knowledge.write_markdown_report(

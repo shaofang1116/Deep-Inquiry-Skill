@@ -60,7 +60,7 @@ def _topic() -> TopicKnowledge:
     )
 
 
-def _reader_document() -> dict[str, object]:
+def _legacy_reader_document() -> dict[str, object]:
     return {
         "schema_version": 1,
         "overview": {
@@ -107,6 +107,175 @@ def _reader_document() -> dict[str, object]:
                 "gap_ids": [],
             }
         ],
+    }
+
+
+def _reader_document() -> dict[str, object]:
+    return {
+        "schema_version": 2,
+        "orientation": {
+            "central_question": "How do scope and controls shape risk?",
+            "scope": "Operational decisions with incomplete evidence.",
+            "current_conclusion": {
+                "text": "Controls reduce risk only when they match scope.",
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            },
+            "paragraphs": ["Connect scope, controls, and risk before deciding."],
+            "claim_ids": ["claim-1"],
+            "evidence_ids": [],
+        },
+        "domain_map": {
+            "concepts": [
+                {
+                    "id": "scope",
+                    "label": "Scope",
+                    "definition": "The conditions covered by a decision.",
+                    "claim_ids": ["claim-1"],
+                    "evidence_ids": [],
+                },
+                {
+                    "id": "controls",
+                    "label": "Controls",
+                    "definition": "Safeguards selected for the stated scope.",
+                    "claim_ids": ["claim-1"],
+                    "evidence_ids": [],
+                },
+                {
+                    "id": "risk",
+                    "label": "Risk",
+                    "definition": "The remaining exposure under those controls.",
+                    "claim_ids": ["claim-2"],
+                    "evidence_ids": [],
+                },
+            ],
+            "relationships": [
+                {
+                    "id": "controls-constrain-risk",
+                    "type": "constrains",
+                    "from_concept_id": "controls",
+                    "to_concept_id": "risk",
+                    "condition": "When controls match the selected scope.",
+                    "claim_ids": ["claim-2"],
+                    "evidence_ids": [],
+                }
+            ],
+            "keystone_concept_ids": ["scope", "controls", "risk"],
+            "prerequisite_edges": [
+                {
+                    "before_concept_id": "scope",
+                    "after_concept_id": "controls",
+                },
+                {
+                    "before_concept_id": "controls",
+                    "after_concept_id": "risk",
+                },
+            ],
+            "key_variables": [
+                {
+                    "name": "Scope variation",
+                    "concept_refs": ["scope", "risk"],
+                    "change_direction": "broader",
+                    "effect": "Broader scope can increase the risk envelope.",
+                    "claim_ids": ["claim-1"],
+                    "evidence_ids": [],
+                    "project_input_required": True,
+                }
+            ],
+        },
+        "sections": [
+            {
+                "id": "scope",
+                "heading": "Set the scope",
+                "cognitive_question": "What conditions define the decision?",
+                "concept_refs": ["scope"],
+                "paragraphs": ["Scope defines the relevant risk envelope."],
+                "mechanism_chain": [
+                    "Scope choice",
+                    "control selection",
+                    "risk envelope",
+                    "decision implication",
+                ],
+                "dimension_refs": ["scope"],
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            },
+            {
+                "id": "controls",
+                "heading": "Match controls",
+                "cognitive_question": "How should controls follow scope?",
+                "concept_refs": ["controls"],
+                "paragraphs": ["Controls must match the scope they protect."],
+                "mechanism_chain": [
+                    "Chosen scope",
+                    "matched controls",
+                    "reduced exposure",
+                    "operating implication",
+                ],
+                "dimension_refs": ["scope"],
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            },
+            {
+                "id": "risk",
+                "heading": "Assess risk",
+                "cognitive_question": "What risk remains after controls?",
+                "concept_refs": ["risk"],
+                "paragraphs": ["Unusual conditions can still defeat controls."],
+                "mechanism_chain": [
+                    "Unusual condition",
+                    "control mismatch",
+                    "residual risk",
+                    "escalation implication",
+                ],
+                "dimension_refs": ["risk"],
+                "claim_ids": ["claim-2"],
+                "evidence_ids": [],
+            },
+        ],
+        "synthesis": {
+            "paragraphs": ["Evaluate scope and controls before accepting risk."],
+            "claim_ids": ["claim-1", "claim-2"],
+            "evidence_ids": [],
+        },
+        "transfer_guidance": [
+            {
+                "prompt": "Apply the scope-control-risk model to a new case.",
+                "reusable_model": "The dependency between scope and controls.",
+                "reevaluate": ["Scope variation for the new case."],
+                "concept_refs": ["scope", "controls", "risk"],
+                "claim_ids": ["claim-1"],
+                "evidence_ids": [],
+            }
+        ],
+        "boundary_notes": [
+            {
+                "type": "evidence_limit",
+                "text": "Unusual conditions require additional evaluation.",
+                "claim_ids": ["claim-2"],
+                "evidence_ids": [],
+                "gap_ids": [],
+            }
+        ],
+        "further_learning": [],
+    }
+
+
+def _document_review(
+    approved: bool,
+    defects: list[str] | None = None,
+) -> dict[str, object]:
+    return {
+        "approved": approved,
+        "defects": {
+            "cognitive_map": [],
+            "mechanism_depth": [],
+            "dependency_order": [],
+            "synthesis": [] if defects is None else defects,
+            "transfer": [],
+            "boundary_expression": [],
+            "audit_leakage": [],
+        },
     }
 
 
@@ -287,12 +456,18 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
         coordinator: HostRuntimeCoordinator,
         run: HostRun,
         integration: dict[str, object],
-        skeptic: dict[str, object],
+        document_review: dict[str, object],
     ):
         cursor = self._integrate_cursor(coordinator, run)
         cursor = coordinator.advance_learning(cursor, integration)
         self.assertEqual(cursor.stage, "skeptic_review")
-        cursor = coordinator.advance_learning(cursor, skeptic)
+        cursor = coordinator.advance_learning(
+            cursor,
+            {
+                "structural_hit": False,
+                "reader_document_review": document_review,
+            },
+        )
         self.assertEqual(cursor.stage, "commit_learning")
         return cursor
 
@@ -307,11 +482,13 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
             set(request.response_template["reader_document"]),
             {
                 "schema_version",
-                "overview",
+                "orientation",
+                "domain_map",
                 "sections",
                 "synthesis",
-                "application_guidance",
+                "transfer_guidance",
                 "boundary_notes",
+                "further_learning",
             },
         )
         self.assertIn("reader_document", request.state_snapshot)
@@ -334,18 +511,9 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
         self.assertEqual(coordinator.store.load(run.topic_id).version, 1)
 
         invalid = _integration({"schema_version": 1})
-        commit = self._commit_cursor(
-            coordinator,
-            run,
-            invalid,
-            {
-                "structural_hit": False,
-                "reader_document_approved": True,
-                "reader_document_defects": [],
-            },
-        )
-        returned = coordinator.commit_learning(commit)
-        self.assertEqual(returned.stage, "integrate_learning")
+        cursor = self._integrate_cursor(coordinator, run)
+        with self.assertRaises(RuntimeContractError):
+            coordinator.advance_learning(cursor, invalid)
         self.assertEqual(coordinator.store.load(run.topic_id).version, 1)
 
     def test_explicit_approval_publishes_schema_v2_atomically(self) -> None:
@@ -354,18 +522,14 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
             coordinator,
             run,
             _integration(),
-            {
-                "structural_hit": False,
-                "reader_document_approved": True,
-                "reader_document_defects": [],
-            },
+            _document_review(True),
         )
 
         next_cursor = coordinator.commit_learning(commit)
         topic = coordinator.store.load(run.topic_id)
         self.assertEqual(next_cursor.stage, "assess_convergence")
         self.assertEqual(topic.version, 2)
-        self.assertEqual(topic.schema_version, 2)
+        self.assertEqual(topic.schema_version, 3)
         self.assertEqual(topic.reader_document, _reader_document())
         self.assertEqual({claim.id for claim in topic.claims}, {"claim-1", "claim-2"})
         audit_dir = coordinator.store.root / "topics" / run.topic_id / "audit"
@@ -375,9 +539,12 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
                     encoding="utf-8"
                 )
             )
-            self.assertTrue(audit_record["review"]["reader_document_approved"])
+            self.assertTrue(
+                audit_record["review"]["reader_document_review"]["approved"]
+            )
             self.assertEqual(
-                audit_record["review"]["reader_document_defects"], []
+                audit_record["review"]["reader_document_review"]["defects"],
+                _document_review(True)["defects"],
             )
 
     def test_document_rejection_returns_to_integrate_with_defects(self) -> None:
@@ -386,40 +553,99 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
             coordinator,
             run,
             _integration(),
-            {
-                "structural_hit": False,
-                "reader_document_approved": False,
-                "reader_document_defects": ["The synthesis omits a condition."],
-            },
+            _document_review(False, ["The synthesis omits a condition."]),
         )
 
         returned = coordinator.commit_learning(commit)
         self.assertEqual(returned.stage, "integrate_learning")
         self.assertEqual(
-            returned.payload["reader_document_defects"],
-            ["The synthesis omits a condition."],
+            returned.payload["reader_document_review"],
+            _document_review(False, ["The synthesis omits a condition."]),
         )
         self.assertEqual(coordinator.store.load(run.topic_id).version, 1)
 
-    def test_direct_publisher_rejects_empty_document_defects(self) -> None:
+    def test_direct_publisher_rejects_legacy_or_mixed_document_review(
+        self,
+    ) -> None:
         coordinator, run = self._coordinator()
+
+        for candidate_id, document_review in (
+            (
+                "malformed-legacy-document-review",
+                {
+                    "reader_document_approved": False,
+                    "reader_document_defects": [],
+                },
+            ),
+            (
+                "rejected-reader-document-defects",
+                {
+                    "reader_document_approved": False,
+                    "reader_document_defects": [
+                        "The synthesis omits a condition."
+                    ],
+                },
+            ),
+            (
+                "legacy_only",
+                {
+                    "reader_document_approved": True,
+                    "reader_document_defects": [],
+                },
+            ),
+            (
+                "mixed_null",
+                {
+                    "reader_document_approved": True,
+                    "reader_document_defects": [],
+                    "reader_document_review": None,
+                },
+            ),
+        ):
+            with self.subTest(candidate_id=candidate_id):
+                outcome = coordinator.publisher.publish_or_reject(
+                    topic_id=run.topic_id,
+                    base_version=1,
+                    candidate=_integration(),
+                    review={
+                        "approved": True,
+                        "structural_hit": False,
+                        "reason": "The candidate passed skeptical review.",
+                        **document_review,
+                    },
+                    candidate_id=candidate_id,
+                )
+
+                self.assertEqual(outcome.state, "rejected")
+                self.assertEqual(outcome.rejection_code, "invalid_review")
+                self.assertEqual(coordinator.store.load(run.topic_id).version, 1)
+
+    def test_direct_publisher_rejects_legacy_document_candidate(
+        self,
+    ) -> None:
+        coordinator, run = self._coordinator()
+        candidate = _integration(_legacy_reader_document())
+        candidate["cycle"] = 1
+        candidate["skeptic_structural_hit"] = False
 
         outcome = coordinator.publisher.publish_or_reject(
             topic_id=run.topic_id,
             base_version=1,
-            candidate=_integration(),
+            candidate=candidate,
             review={
                 "approved": True,
                 "structural_hit": False,
                 "reason": "The candidate passed skeptical review.",
-                "reader_document_approved": False,
-                "reader_document_defects": [],
+                "reader_document_review": _document_review(True),
             },
-            candidate_id="empty-reader-document-defects",
+            candidate_id="legacy-document-candidate",
         )
 
         self.assertEqual(outcome.state, "rejected")
-        self.assertEqual(outcome.rejection_code, "invalid_review")
+        self.assertEqual(
+            outcome.rejection_code,
+            "invalid_publication_contract",
+        )
         self.assertEqual(coordinator.store.load(run.topic_id).version, 1)
 
     def test_rejected_lifecycle_audit_preserves_document_review(self) -> None:
@@ -429,11 +655,7 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
             coordinator,
             run,
             _integration(),
-            {
-                "structural_hit": False,
-                "reader_document_approved": False,
-                "reader_document_defects": defects,
-            },
+            _document_review(False, defects),
         )
 
         coordinator.commit_learning(commit)
@@ -446,12 +668,12 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
                 )
             )
             self.assertEqual(
-                audit_record["review"]["reader_document_approved"],
+                audit_record["review"]["reader_document_review"]["approved"],
                 False,
             )
             self.assertEqual(
-                audit_record["review"]["reader_document_defects"],
-                defects,
+                audit_record["review"]["reader_document_review"]["defects"],
+                _document_review(False, defects)["defects"],
             )
 
     def test_direct_retirement_invalidates_document_and_advances_once(self) -> None:
@@ -482,8 +704,7 @@ class ReaderDocumentRuntimeTests(unittest.TestCase):
                 "approved": True,
                 "structural_hit": False,
                 "reason": "The candidate passed skeptical review.",
-                "reader_document_approved": True,
-                "reader_document_defects": [],
+                "reader_document_review": _document_review(True),
             },
             candidate_id="seed-reader-document",
         )
